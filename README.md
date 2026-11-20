@@ -61,6 +61,16 @@ Put `Install-KeepItUpToDater.ps1` and `config.json` in a share all computers can
 
 The domain `contoso.local`, the computer names and the addresses in the examples and tests are placeholders. Replace them with your own in `config.json` and the deployment commands.
 
+## Licence
+
+[Apache License 2.0 with the Commons Clause](LICENSE).
+
+- **Allowed:** use it for free, also commercially inside your own organisation; change it; share it, with this licence included.
+- **Not allowed:** sell it, or sell a product or service whose value comes entirely or substantially from it, including fees for hosting, consulting or support around it.
+- **No warranty, no liability:** the software is provided "as is". You use it at your own risk; the author is not liable for any damage (sections 7 and 8 of the Apache License).
+
+Because of the Commons Clause this is source-available software, not open source in the OSI sense. Copyright 2026 Hendrik-Jan Sluis.
+
 ## Feedback
 
 Questions, problems and ideas: open an issue in this repository.
