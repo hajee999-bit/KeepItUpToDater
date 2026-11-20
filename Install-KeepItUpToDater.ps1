@@ -102,6 +102,14 @@
     JSON, an invalid ID or an invalid computer name stops the installer with exit code 2 before
     anything is changed.
 
+.PARAMETER SelfUpdate (config.json)
+    Not a parameter: "SelfUpdate": false in config.json turns the self-update off (1.5.1).
+    When the installer reads config.json from a network folder (NETLOGON), every System run
+    compares the installer in that folder with the installed version. A newer one is installed
+    at the start of the run, with the settings this computer was installed with, and the run
+    then goes on with the new version. One try per day per version. With a signed updater or
+    TrustedSigners, the new installer must be signed by an approved signer.
+
 .PARAMETER IncludeUnknown
     Also upgrade packages whose installed version winget cannot determine. Off by default,
     because those packages can end up being reinstalled on every run.
@@ -194,7 +202,7 @@
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -Uninstall
 
 .NOTES
-    Version   1.5.0
+    Version   1.5.1
     Exit codes (installer): 0 OK, 1 not elevated, 2 install failed or config file missing/invalid.
     Scheduled tasks:        System, User (not with -NoUserTask or "UserTask": false), and Notify
                             (as SYSTEM at each sign-in: shows the last result of the System task
@@ -250,7 +258,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$ToolVersion  = '1.5.0'
+$ToolVersion  = '1.5.1'
 $Name         = 'KeepItUpToDater'
 $DisplayName  = 'Keep It Up To Dater'
 $Organization = 'contoso.local'
@@ -276,6 +284,7 @@ $ProxyCfg = $null         # "Proxy" from config.json: http://host:port
 $ProxyBypassCfg = $null   # "ProxyBypass" from config.json: what goes direct (default <local>)
 $UseProxyCfg = $null      # "UseProxy" from config.json: true, false or computer names (* and ? allowed)
 $MaxRunHoursCfg = $null   # "MaxRunHours" from config.json: 0 (no limit) or 1 to 72
+$SelfUpdateCfg = $null   # "SelfUpdate" from config.json: false turns the self-update off (1.5.1)
 $TrustedSigners = @()     # "TrustedSigners" from config.json: certificate thumbprints approved for a signed updater (1.5.0)
 $IcaclsExe = Join-Path $env:SystemRoot 'System32\icacls.exe'   # 1.5.0 (security review F-05): by full path
 
@@ -297,6 +306,8 @@ $RunnerCode = @'
                     -Uninstall uses it); changes nothing else
     -ClearPins      with -Mode System, as SYSTEM: lift the exclusions (winget pins) this tool set
                     (the installer's -Uninstall uses it); changes nothing else
+    -NoSelfUpdate   with -Mode System: do not look for a newer version on NETLOGON in this run
+                    (the self-update itself uses it for the run it hands over to the new version)
 #>
 [CmdletBinding()]
 param(
@@ -307,7 +318,8 @@ param(
     [switch]$Force,
     [switch]$ListOnly,
     [switch]$ClearProxy,
-    [switch]$ClearPins
+    [switch]$ClearPins,
+    [switch]$NoSelfUpdate
 )
 
 $ErrorActionPreference = 'Continue'
@@ -1250,6 +1262,111 @@ function Update-ExclusionsFromSource {
     }
 }
 Update-ExclusionsFromSource
+
+# 1.5.1: self-update from NETLOGON. The installer next to the config.json this run reads
+# (ExclusionsSource) is compared with the installed version. A newer one is copied into the data
+# folder (SYSTEM and Administrators only), checked, and run with the settings this computer was
+# installed with; this run then hands over to the new updater. Same trust as the GPO startup
+# script that runs that installer at every start. With a signed updater (AllSigned) or
+# TrustedSigners, the new installer must be signed by an approved signer.
+$selfUpdateNote = ''
+function Invoke-SelfUpdate {
+    if ($Mode -ne 'System' -or $ListOnly -or $NoSelfUpdate) { return }
+    $src = "$($cfg.ExclusionsSource)"
+    if (-not $src) { return }
+    $srcDir = Split-Path -Parent $src
+    $srcCfg = $null
+    try { $srcCfg = Get-Content -LiteralPath $src -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop } catch { return }
+    if ($srcCfg.SelfUpdate -eq $false) { Write-Log "Self-update is off (SelfUpdate false in $src)."; return }
+    $inst = Join-Path $srcDir 'Install-KeepItUpToDater.ps1'
+    if (-not (Test-Path -LiteralPath $inst -PathType Leaf)) { return }
+    $text = ''
+    try { $text = [IO.File]::ReadAllText($inst) } catch { Write-Log "Self-update: cannot read $inst ($($_.Exception.Message))."; return }
+    if ($text -notmatch "(?m)^\`$ToolVersion\s*=\s*'([0-9]+(\.[0-9]+){1,3})'") { Write-Log "Self-update: no version found in $inst; not used."; return }
+    $new = $Matches[1]; $cur = "$($cfg.Version)" -replace '-.*$', ''
+    $vNew = $null; $vCur = $null
+    if (-not [version]::TryParse($new, [ref]$vNew) -or -not [version]::TryParse($cur, [ref]$vCur) -or $vNew -le $vCur) { return }
+    # One try per day per version, so a version that fails to install does not run at every start
+    $tryFile = Join-Path $dataDir 'selfupdate.last'
+    try {
+        $t = @("$(Get-Content -LiteralPath $tryFile -Raw -ErrorAction Stop)".Trim() -split '\|')
+        if ($t[0] -eq $new -and ([datetime]::Parse($t[1], $inv)).Date -eq (Get-Date).Date) { Write-Log "Self-update to $new was already tried today; next try tomorrow."; return }
+    } catch { }
+    try { "$new|$((Get-Date).ToString('o'))" | Set-Content -LiteralPath $tryFile -Encoding ascii -ErrorAction Stop } catch { }
+    Write-Log "Self-update: version $new found in $srcDir (installed: $cur)."
+    # Copy first and check the copies, so the files cannot change between the check and the run
+    $stage = Join-Path $dataDir 'selfupdate'
+    try {
+        if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction Stop }
+        New-Item -ItemType Directory -Path $stage -Force -ErrorAction Stop | Out-Null
+        Copy-Item -LiteralPath $inst -Destination $stage -Force -ErrorAction Stop
+        $srcRunner = Join-Path $srcDir 'Invoke-KeepItUpToDater.ps1'
+        if (Test-Path -LiteralPath $srcRunner -PathType Leaf) { Copy-Item -LiteralPath $srcRunner -Destination $stage -Force -ErrorAction Stop }
+    } catch {
+        $script:selfUpdateNote = "Self-update to $new failed: could not copy it from $srcDir ($($_.Exception.Message)); this run uses $cur."
+        Write-Log "WARNING: $script:selfUpdateNote"; return
+    }
+    $copy = Join-Path $stage 'Install-KeepItUpToDater.ps1'
+    if ([IO.File]::ReadAllText($copy) -ne $text) {
+        $script:selfUpdateNote = "Self-update to $new failed: $inst changed while it was copied; this run uses $cur."
+        Write-Log "WARNING: $script:selfUpdateNote"; Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue; return
+    }
+    $ownSig = Get-AuthenticodeSignature -FilePath $PSCommandPath
+    $trusted = @(@($cfg.TrustedSigners) | Where-Object { $_ } | ForEach-Object { "$_".ToUpperInvariant() })
+    if ($ownSig.Status -eq 'Valid') { $trusted += $ownSig.SignerCertificate.Thumbprint }
+    $signedMode = ($ownSig.Status -eq 'Valid') -or (@($cfg.TrustedSigners | Where-Object { $_ }).Count -gt 0)
+    if ($signedMode) {
+        foreach ($f in @(Get-ChildItem -LiteralPath $stage -File)) {
+            $sig = Get-AuthenticodeSignature -FilePath $f.FullName
+            $why = if ($sig.Status -ne 'Valid') { "its signature is $($sig.Status)" } elseif ($trusted -notcontains $sig.SignerCertificate.Thumbprint) { "it is signed by $($sig.SignerCertificate.Subject), not an approved signer" } else { '' }
+            if ($why) {
+                $script:selfUpdateNote = "Self-update to $new refused: $($f.Name) in $srcDir is not used because $why; this run uses $cur."
+                Write-Log "WARNING: $script:selfUpdateNote"; Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue; return
+            }
+        }
+    }
+    # The settings this computer was installed with
+    $a = @('-DayOfWeek', "$($cfg.ScheduleDay)", '-Time', "$($cfg.ScheduleTime)", '-ConfigFile', $src)
+    if ($null -ne $cfg.MinIntervalDays) { $a += @('-MinIntervalDays', "$($cfg.MinIntervalDays)") }
+    if ($null -ne $cfg.InstallTimeoutMinutes) { $a += @('-InstallTimeoutMinutes', "$($cfg.InstallTimeoutMinutes)") }
+    if ($null -ne $cfg.RandomDelayMinutes) { $a += @('-RandomDelayMinutes', "$($cfg.RandomDelayMinutes)") }
+    if ($cfg.IncludeUnknown -eq $true) { $a += '-IncludeUnknown' }
+    if ($cfg.InstallVCRuntime -eq $false) { $a += '-NoVCRuntime' }
+    if ($cfg.ShowResultsSwitch -eq $true) { $a += '-ShowResults' }
+    if ($cfg.UseProxySwitch -eq $true) { $a += '-UseProxy' }
+    if ($null -ne $cfg.MaxRunHoursSwitch) { $a += @('-MaxRunHours', "$($cfg.MaxRunHoursSwitch)") }
+    if ($cfg.UserTask -eq $false -and $cfg.UserTaskConfig -ne $false) { $a += '-NoUserTask' }
+    $policy = if ($signedMode) { 'AllSigned' } else { 'Bypass' }
+    $ps = Join-Path $PSHOME 'powershell.exe'
+    Write-Log "Self-update: installing $new ($policy): $($a -join ' ')"
+    $out = & $ps -NoProfile -NonInteractive -ExecutionPolicy $policy -File $copy @a 2>&1
+    $rc = $LASTEXITCODE
+    foreach ($l in @($out)) { if ("$l".Trim()) { Write-Log "   installer: $l" } }
+    $now = $null
+    try { $now = ([IO.File]::ReadAllText($cfgFile) | ConvertFrom-Json).Version } catch { }
+    if ($rc -ne 0 -or "$now" -ne $new) {
+        $script:selfUpdateNote = "Self-update to $new failed (installer exit code $rc, installed version now $(if ($now) { $now } else { 'unknown' })); this run uses $cur. Tried again tomorrow."
+        Write-Log "WARNING: $script:selfUpdateNote"; Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue; return
+    }
+    Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Log "Self-update: Keep It Up To Dater $cur -> $new installed. This run goes on with $new."
+    # Hand over: the new updater does this run. The run marker goes first, or the new updater
+    # would see this run as still busy and skip.
+    if ($runMarker) { Remove-Item -LiteralPath $runMarker -Force -ErrorAction SilentlyContinue }
+    $env:KIUTD_UPDATED_FROM = $cur
+    $b = @('-Mode', 'System', '-NoSelfUpdate')
+    if ($Force) { $b += '-Force' }
+    # The installer wrote the new updater over this file (the installed Invoke-KeepItUpToDater.ps1)
+    $newPolicy = if ((Get-AuthenticodeSignature -FilePath $PSCommandPath).Status -eq 'Valid') { 'AllSigned' } else { 'Bypass' }
+    & $ps -NoProfile -NonInteractive -ExecutionPolicy $newPolicy -File $PSCommandPath @b
+    exit $LASTEXITCODE
+}
+Invoke-SelfUpdate
+if ($env:KIUTD_UPDATED_FROM) {
+    $selfUpdateNote = "Keep It Up To Dater updated itself from $env:KIUTD_UPDATED_FROM to $($cfg.Version)."
+    Write-Log $selfUpdateNote
+    Remove-Item Env:\KIUTD_UPDATED_FROM -ErrorAction SilentlyContinue
+}
 if ($computerIds.Count) { Write-Log ("Exclusions for this computer ($env:COMPUTERNAME) in config.json: " + ($computerIds -join ', ')) }
 # The proxy for winget and the installers that run as SYSTEM (only with UseProxy on for this computer)
 if ($Mode -eq 'System' -and -not $ListOnly) { Sync-MachineProxy }
@@ -2120,8 +2237,8 @@ if ($completed) {
     } catch { Write-Log "WARNING: could not save $retryFile : $($_.Exception.Message)" }
 }
 $runExit = if (-not $completed) { 1 } elseif ($evt -ne 1000) { 2 } else { 0 }
-foreach ($n in @($unfinishedNote, $replaceNote, $removeNote, $stallNote, $restartNote, $reopenNote, $listedNote, $vcNote, $cfgNote, $exclNote, $computerWarn, $localNote, $localWarn, $retryNote)) { if ($n) { $msg += " $n" } }
-if ($cfgNote -and $evt -eq 1000) { $evt = 1001; $type = 'Warning'; if ($runExit -eq 0) { $runExit = 2 } }
+foreach ($n in @($unfinishedNote, $replaceNote, $removeNote, $stallNote, $restartNote, $reopenNote, $listedNote, $vcNote, $cfgNote, $exclNote, $computerWarn, $localNote, $localWarn, $selfUpdateNote, $retryNote)) { if ($n) { $msg += " $n" } }
+if (($cfgNote -or $selfUpdateNote -match '^Self-update') -and $evt -eq 1000) { $evt = 1001; $type = 'Warning'; if ($runExit -eq 0) { $runExit = 2 } }
 Write-Log $msg
 Write-Summary $evt $type $msg
 if ($completed) { (Get-Date).ToString('o') | Set-Content -Path $stamp -Encoding ascii }
@@ -2383,6 +2500,11 @@ function Read-Exclusions {
         $script:MaxRunHoursCfg = [int]$v
     }
     Write-RunLimitSetting
+    $script:SelfUpdateCfg = $null
+    if ((@($json.PSObject.Properties.Name) -contains 'SelfUpdate') -and ($null -ne $json.SelfUpdate)) {
+        if ($json.SelfUpdate -isnot [bool]) { throw "${path}: SelfUpdate must be true or false, for example `"SelfUpdate`": false" }
+        $script:SelfUpdateCfg = $json.SelfUpdate
+    }
     $script:TrustedSigners = @()
     if ((@($json.PSObject.Properties.Name) -contains 'TrustedSigners') -and ($null -ne $json.TrustedSigners)) {
         $tp = @(@($json.TrustedSigners) | ForEach-Object { ("$_" -replace '\s', '').ToUpperInvariant() } | Where-Object { $_ })
@@ -2413,6 +2535,7 @@ function Save-Config([string]$Folder) {
         IncludeUnknown  = [bool]$IncludeUnknown
         InstallVCRuntime = -not [bool]$NoVCRuntime
         MinIntervalDays = $MinIntervalDays
+        RandomDelayMinutes = $RandomDelayMinutes
         ScheduleDay     = $DayOfWeek
         ScheduleTime    = $Time
         InstallTimeoutMinutes = $InstallTimeoutMinutes
@@ -2429,6 +2552,8 @@ function Save-Config([string]$Folder) {
         UseProxySwitch  = [bool]$UseProxy
         MaxRunHours     = $MaxRunHoursCfg
         MaxRunHoursSwitch = $(if ($MaxRunHours -ge 0) { $MaxRunHours } else { $null })
+        TrustedSigners  = @($TrustedSigners)
+        SelfUpdate      = $SelfUpdateCfg
     } | ConvertTo-Json -Depth 5
     # 1.5.0 (security review F-02): written next to the target and swapped in; the same text is the last good copy
     foreach ($f in @('config.json', 'config.lastgood.json')) {

@@ -2,7 +2,7 @@
 
 Free weekly app updates for Windows desktops, with only what Windows already has: PowerShell 5.1, Task Scheduler and winget. No agent, no server, no licence cost. Built for desktop admins who do not have Intune, SCCM or a patch management suite for every device, and whose users are not local admins.
 
-Current release: **1.5.0**
+Current release: **1.5.1**
 
 ## What it does
 
@@ -14,6 +14,7 @@ Current release: **1.5.0**
 - Event log entries 1000 (OK), 1001 (warning) and 1002 (error), and a task result of 0x0, 0x2 or 0x1 for monitoring
 - Retries failed updates on a later day, at most twice before the next weekly run
 - `-ListOnly` shows what would change without changing anything
+- Updates itself: put a new version of the installer next to `config.json` on the share, and every computer installs it at the start of its next weekly run (`"SelfUpdate": false` turns this off)
 - Security reviewed: locked-down program and data folders, a config that fails closed, full paths for Windows tools, and an optional signed updater that runs under AllSigned
 
 ## Requirements

@@ -1,4 +1,4 @@
-KEEP IT UP TO DATER 1.5.0
+KEEP IT UP TO DATER 1.5.1
 ===========================================================
 
 Weekly automatic app updates with winget for Windows devices where users are
@@ -169,6 +169,14 @@ WHERE THINGS ARE ON A DEVICE
   the root)
 
 CHANGES
+  1.5.1  Self-update from NETLOGON: each weekly System run compares the
+         installer next to the config.json on NETLOGON with its own version.
+         A newer one is installed at the start of the run, with the settings
+         the computer was installed with, and the run goes on with the new
+         version. Before, a new version arrived only at the next restart (GPO
+         startup script). One try per day per version; "SelfUpdate": false in
+         config.json turns it off. With a signed updater or TrustedSigners the
+         new installer must be signed by an approved signer.
   1.5.0  Fixes from the security review of 19 Nov 2026 (findings F-01 to F-09,
          see Security-Remediation-1.5.0.txt):
          - Program and data folders: no junctions or symbolic links, owned by

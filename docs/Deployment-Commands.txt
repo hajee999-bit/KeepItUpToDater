@@ -1,4 +1,4 @@
-KEEP IT UP TO DATER 1.5.0 - COMMANDS TO COPY AND PASTE
+KEEP IT UP TO DATER 1.5.1 - COMMANDS TO COPY AND PASTE
 =====================================================================
 Every command is one single line.
 
@@ -325,6 +325,20 @@ Set-AuthenticodeSignature -FilePath .\Install-KeepItUpToDater.ps1 -Certificate $
 Copy-Item C:\Temp\KIUTD-export\Invoke-KeepItUpToDater.ps1 .\
 (The installer deploys a signed Invoke-KeepItUpToDater.ps1 that sits next to it instead of its built-in copy.)
 With Group Policy: put both signed files in \\contoso.local\NETLOGON\KeepItUpToDater\
+
+NEW VERSION ON NETLOGON (self-update, 1.5.1)
+--------------------------------------------
+Copy the new Install-KeepItUpToDater.ps1 (and config.json, if it changed) over the old
+one in \\contoso.local\NETLOGON\KeepItUpToDater. Computers with 1.5.1 or later install it at
+the start of their next weekly run; the GPO startup script also installs it at the next
+restart, whichever comes first. Computers on 1.5.0 or older get it at the next restart only.
+Check a computer: Status.cmd (elevated) shows the installed version, and system.log has
+"Self-update: ... installed". A failed install is a warning (event 1001, task result
+0x2), the run then uses the old version and tries again the next day.
+Turn it off for all computers, in config.json on NETLOGON:
+    "SelfUpdate": false
+With a signed updater (TrustedSigners), the new installer must be signed as well, or the
+computers keep the old version and report it.
 
 SECURITY (1.5.0, security review of 19 Nov 2026)
 Folders: the installer refuses junctions or symbolic links and makes Administrators
