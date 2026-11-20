@@ -58,10 +58,28 @@
       Application event log, source "KeepItUpToDater"            one summary event per run
 
 .PARAMETER DayOfWeek
-    Day of the weekly run. Default Wednesday.
+    Day of the weekly run. Default Wednesday. "Schedule" in config.json overrides it (1.5.2).
 
 .PARAMETER Time
-    Local start time of the weekly run, HH:mm. Default 12:00.
+    Local start time of the weekly run, HH:mm. Default 12:00. "Schedule" in config.json overrides it.
+
+.PARAMETER Schedule (config.json)
+    Not a parameter (1.5.2): the weekly start for every computer, set centrally in config.json.
+    A fixed day and time:
+        "Schedule": { "Mode": "Fixed", "Day": "Tuesday", "Time": "10:00" }
+    Or random per computer, so many computers do not all download at the same moment:
+        "Schedule": { "Mode": "Random", "Days": "Weekdays", "From": "09:00", "To": "14:30" }
+    Days is "Weekdays" (Monday to Friday), "AllDays" or a list such as [ "Monday", "Wednesday" ]. Each
+    computer gets its own fixed day and minute in that window, worked out from its name, so the
+    slot stays the same at every reinstall and computers are spread evenly. The random delay is
+    then 0 unless -RandomDelayMinutes is given; with a delay, the slot is chosen so that the
+    start stays before "To". Overrides -DayOfWeek, -Time and -RandomSchedule. A change takes effect when the
+    installer runs again (next restart with the GPO, or the next self-update).
+
+.PARAMETER RandomSchedule
+    Random weekly start per computer on a weekday (Monday to Friday) between 09:00 and 14:30,
+    instead of -DayOfWeek and -Time (1.5.2). The slot comes from the computer name, so it stays
+    the same at every reinstall. "Schedule" in config.json overrides it and can set another window.
 
 .PARAMETER RandomDelayMinutes
     Random start delay so devices don't all download at the same moment. Default 60, 0 disables.
@@ -202,7 +220,7 @@
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -Uninstall
 
 .NOTES
-    Version   1.5.1
+    Version   1.5.2
     Exit codes (installer): 0 OK, 1 not elevated, 2 install failed or config file missing/invalid.
     Scheduled tasks:        System, User (not with -NoUserTask or "UserTask": false), and Notify
                             (as SYSTEM at each sign-in: shows the last result of the System task
@@ -232,6 +250,8 @@ param(
     [ValidateRange(0, 720)]
     [int]$RandomDelayMinutes = 60,
 
+    [switch]$RandomSchedule,
+
     [ValidateRange(0, 30)]
     [int]$MinIntervalDays = 0,
 
@@ -258,7 +278,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$ToolVersion  = '1.5.1'
+$ToolVersion  = '1.5.2'
 $Name         = 'KeepItUpToDater'
 $DisplayName  = 'Keep It Up To Dater'
 $Organization = 'contoso.local'
@@ -285,6 +305,8 @@ $ProxyBypassCfg = $null   # "ProxyBypass" from config.json: what goes direct (de
 $UseProxyCfg = $null      # "UseProxy" from config.json: true, false or computer names (* and ? allowed)
 $MaxRunHoursCfg = $null   # "MaxRunHours" from config.json: 0 (no limit) or 1 to 72
 $SelfUpdateCfg = $null   # "SelfUpdate" from config.json: false turns the self-update off (1.5.1)
+$ScheduleCfg = $null   # "Schedule" from config.json: spread the weekly start (1.5.2)
+$RandomDelayGiven = $PSBoundParameters.ContainsKey('RandomDelayMinutes')
 $TrustedSigners = @()     # "TrustedSigners" from config.json: certificate thumbprints approved for a signed updater (1.5.0)
 $IcaclsExe = Join-Path $env:SystemRoot 'System32\icacls.exe'   # 1.5.0 (security review F-05): by full path
 
@@ -1336,6 +1358,7 @@ function Invoke-SelfUpdate {
     if ($cfg.UseProxySwitch -eq $true) { $a += '-UseProxy' }
     if ($null -ne $cfg.MaxRunHoursSwitch) { $a += @('-MaxRunHours', "$($cfg.MaxRunHoursSwitch)") }
     if ($cfg.UserTask -eq $false -and $cfg.UserTaskConfig -ne $false) { $a += '-NoUserTask' }
+    if ($cfg.RandomScheduleSwitch -eq $true) { $a += '-RandomSchedule' }
     $policy = if ($signedMode) { 'AllSigned' } else { 'Bypass' }
     $ps = Join-Path $PSHOME 'powershell.exe'
     Write-Log "Self-update: installing $new ($policy): $($a -join ' ')"
@@ -2304,6 +2327,73 @@ function Format-RemoveOlderRules($Rules) {
     if (-not $Rules -or -not $Rules.Count) { return 'none' }
     return (@($Rules.Keys | ForEach-Object { $sw = "$($Rules[$_])"; if ($_ -eq '*') { '* (every package installed more than once)' } elseif ($sw -eq 'keep') { "$_ (keep older copies)" } elseif ($sw) { "$_ (uninstall switches: $sw)" } else { "$_ (quiet uninstall command only)" } }) -join ', ')
 }
+# 1.5.2: "Schedule": { "Days": "Weekdays" or [ ... ], "From": "HH:mm", "To": "HH:mm" }
+function ConvertTo-ScheduleCfg($Value, [string]$Path) {
+    $fixedEx = '"Schedule": { "Mode": "Fixed", "Day": "Tuesday", "Time": "10:00" }'
+    $randomEx = '"Schedule": { "Mode": "Random", "Days": "Weekdays", "From": "09:00", "To": "14:30" }'
+    if ($Value -isnot [Management.Automation.PSCustomObject]) { throw "${Path}: Schedule must be an object, for example $fixedEx or $randomEx" }
+    $names = @($Value.PSObject.Properties.Name)
+    $mode = "$($Value.Mode)"
+    if (-not $mode) { $mode = if ($names -contains 'Day' -or $names -contains 'Time') { 'Fixed' } else { 'Random' } }
+    $all = @('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+    $hhmm = '^([01]\d|2[0-3]):[0-5]\d$'
+    if ($mode -eq 'Fixed') {
+        $day = @($all | Where-Object { $_ -eq "$($Value.Day)" })
+        if (-not $day) { throw "${Path}: Schedule.Day must be a day name in English, for example $fixedEx" }
+        if ("$($Value.Time)" -notmatch $hhmm) { throw "${Path}: Schedule.Time must be a time as HH:mm, for example $fixedEx" }
+        return [pscustomobject][ordered]@{ Mode = 'Fixed'; Day = $day[0]; Time = "$($Value.Time)" }
+    }
+    if ($mode -ne 'Random') { throw "${Path}: Schedule.Mode must be `"Fixed`" or `"Random`", for example $randomEx" }
+    $days = @()
+    if ($null -eq $Value.Days -or ($Value.Days -is [string] -and $Value.Days -eq 'Weekdays')) { $days = $all[0..4] }
+    elseif ($Value.Days -is [string] -and $Value.Days -eq 'AllDays') { $days = $all }
+    else {
+        foreach ($d in @($Value.Days)) {
+            $m = @($all | Where-Object { $_ -eq "$d" })
+            if (-not $m) { throw "${Path}: Schedule.Days must be `"Weekdays`", `"AllDays`" or a list of day names in English, such as [ `"Monday`", `"Tuesday`" ]; `"$d`" is not a day" }
+            if ($days -notcontains $m[0]) { $days += $m[0] }
+        }
+    }
+    if (-not $days.Count) { throw "${Path}: Schedule.Days is empty, for example $randomEx" }
+    $days = @($all | Where-Object { $days -contains $_ })   # Monday first
+    $from = if ($null -eq $Value.From) { '09:00' } else { "$($Value.From)" }
+    $to = if ($null -eq $Value.To) { '14:30' } else { "$($Value.To)" }
+    foreach ($v in $from, $to) { if ($v -notmatch $hhmm) { throw "${Path}: Schedule.From and Schedule.To must be times as HH:mm, for example $randomEx" } }
+    if ([TimeSpan]::Parse($to) -le [TimeSpan]::Parse($from)) { throw "${Path}: Schedule.To ($to) must be later than Schedule.From ($from)" }
+    return [pscustomobject][ordered]@{ Mode = 'Random'; Days = @($days); From = $from; To = $to }
+}
+# The same computer name always gives the same slot; names spread evenly over the slots
+function Get-ScheduleSlot($Cfg, [string]$ComputerName, [int]$DelayMinutes) {
+    $from = [int][TimeSpan]::Parse($Cfg.From).TotalMinutes
+    $last = [int][TimeSpan]::Parse($Cfg.To).TotalMinutes - $DelayMinutes
+    if ($last -lt $from) { throw "Schedule $($Cfg.From)-$($Cfg.To) is shorter than the random delay of $DelayMinutes minutes. Use a longer window or a smaller -RandomDelayMinutes." }
+    $perDay = $last - $from + 1
+    $days = @($Cfg.Days)
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { $h = $sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($ComputerName.ToUpperInvariant())) } finally { $sha.Dispose() }
+    $n = [uint64][BitConverter]::ToUInt32($h, 0)
+    $i = [int]($n % [uint64]($days.Count * $perDay))
+    $m = $from + ($i % $perDay)
+    return @{ Day = $days[[int][math]::Floor($i / $perDay)]; Time = '{0:00}:{1:00}' -f [math]::Floor($m / 60), ($m % 60) }
+}
+function Resolve-Schedule {
+    $cfg = $script:ScheduleCfg
+    if ($null -eq $cfg -and $script:RandomSchedule) { $cfg = [pscustomobject][ordered]@{ Mode = 'Random'; Days = @('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'); From = '09:00'; To = '14:30' } }
+    if ($null -eq $cfg) { return }
+    $src = if ($null -ne $script:ScheduleCfg) { 'config.json' } else { '-RandomSchedule' }
+    if ($cfg.Mode -eq 'Fixed') {
+        $script:DayOfWeek = $cfg.Day; $script:Time = $cfg.Time
+        Write-Output "Weekly start ($src): $($cfg.Day) $($cfg.Time)$(if ($script:RandomDelayMinutes -gt 0) { " + up to $($script:RandomDelayMinutes) min random delay" })"
+        return
+    }
+    if (-not $script:RandomDelayGiven) { $script:RandomDelayMinutes = 0 }
+    $slot = Get-ScheduleSlot $cfg $env:COMPUTERNAME $script:RandomDelayMinutes
+    $script:DayOfWeek = $slot.Day
+    $script:Time = $slot.Time
+    $d = @($cfg.Days)
+    $dayText = if ($d.Count -eq 5 -and $d[0] -eq 'Monday' -and $d[4] -eq 'Friday') { 'Monday to Friday' } else { $d -join ', ' }
+    Write-Output "Weekly start spread ($src): $dayText $($cfg.From)-$($cfg.To); this computer ($env:COMPUTERNAME): $($slot.Day) $($slot.Time)$(if ($script:RandomDelayMinutes -gt 0) { " + up to $($script:RandomDelayMinutes) min random delay" })"
+}
 function Write-RunLimitSetting {
     $c = Get-RunLimitChoice
     Write-Output "Time limit per run: $(Format-RunHours $c.Hours) ($($c.Source))"
@@ -2356,6 +2446,7 @@ function Read-Exclusions {
                 if ($null -ne $prev.ProxyBypass) { $script:ProxyBypassCfg = "$($prev.ProxyBypass)" }
                 if ($null -ne $prev.UseProxy) { $script:UseProxyCfg = $(if ($prev.UseProxy -is [bool]) { $prev.UseProxy } else { @($prev.UseProxy) }) }
                 if ($null -ne $prev.MaxRunHours) { $script:MaxRunHoursCfg = [int]$prev.MaxRunHours }
+                if ($null -ne $prev.Schedule) { $script:ScheduleCfg = ConvertTo-ScheduleCfg $prev.Schedule $installed }
             } catch {
                 # 1.5.0 (security review F-02): never carry on as if there were no exclusions
                 throw "No config.json next to the installer ($path), and the installed copy ($installed) cannot be read: $($_.Exception.Message). Put a config.json next to the installer."
@@ -2369,6 +2460,7 @@ function Read-Exclusions {
         Write-UserTaskSetting
         Write-ProxySetting $path
         Write-RunLimitSetting
+        Resolve-Schedule
         return
     }
     try { $json = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json }
@@ -2505,6 +2597,11 @@ function Read-Exclusions {
         if ($json.SelfUpdate -isnot [bool]) { throw "${path}: SelfUpdate must be true or false, for example `"SelfUpdate`": false" }
         $script:SelfUpdateCfg = $json.SelfUpdate
     }
+    $script:ScheduleCfg = $null
+    if ((@($json.PSObject.Properties.Name) -contains 'Schedule') -and ($null -ne $json.Schedule)) {
+        $script:ScheduleCfg = ConvertTo-ScheduleCfg $json.Schedule $path
+    }
+    Resolve-Schedule
     $script:TrustedSigners = @()
     if ((@($json.PSObject.Properties.Name) -contains 'TrustedSigners') -and ($null -ne $json.TrustedSigners)) {
         $tp = @(@($json.TrustedSigners) | ForEach-Object { ("$_" -replace '\s', '').ToUpperInvariant() } | Where-Object { $_ })
@@ -2554,6 +2651,8 @@ function Save-Config([string]$Folder) {
         MaxRunHoursSwitch = $(if ($MaxRunHours -ge 0) { $MaxRunHours } else { $null })
         TrustedSigners  = @($TrustedSigners)
         SelfUpdate      = $SelfUpdateCfg
+        Schedule        = $ScheduleCfg
+        RandomScheduleSwitch = [bool]$RandomSchedule
     } | ConvertTo-Json -Depth 5
     # 1.5.0 (security review F-02): written next to the target and swapped in; the same text is the last good copy
     foreach ($f in @('config.json', 'config.lastgood.json')) {

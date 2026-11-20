@@ -1,4 +1,4 @@
-KEEP IT UP TO DATER 1.5.1 - COMMANDS TO COPY AND PASTE
+KEEP IT UP TO DATER 1.5.2 - COMMANDS TO COPY AND PASTE
 =====================================================================
 Every command is one single line.
 
@@ -325,6 +325,20 @@ Set-AuthenticodeSignature -FilePath .\Install-KeepItUpToDater.ps1 -Certificate $
 Copy-Item C:\Temp\KIUTD-export\Invoke-KeepItUpToDater.ps1 .\
 (The installer deploys a signed Invoke-KeepItUpToDater.ps1 that sits next to it instead of its built-in copy.)
 With Group Policy: put both signed files in \\contoso.local\NETLOGON\KeepItUpToDater\
+
+WEEKLY START: FIXED OR RANDOM (1.5.2)
+-------------------------------------
+In config.json on NETLOGON, one of:
+    "Schedule": { "Mode": "Fixed", "Day": "Tuesday", "Time": "10:00" }
+    "Schedule": { "Mode": "Random", "Days": "Weekdays", "From": "09:00", "To": "14:30" }
+Random: each computer gets its own day and minute in the window (from its name, the same
+at every reinstall), spread evenly; 600 computers give at most 3 starts in the same minute.
+Days can also be "AllDays" or a list such as [ "Monday", "Wednesday" ]. The random delay is
+then 0, unless -RandomDelayMinutes is given (the slot then ends early enough to start
+before "To"). Without "Schedule", -DayOfWeek and -Time apply as before; -RandomSchedule on
+the installer gives Random, weekdays 09:00-14:30. A change in "Schedule" takes effect when
+the installer runs again: at the next restart (GPO) or the next self-update. The installer
+shows the slot of the computer: "Weekly start spread ...; this computer (NAME): Thursday 11:47".
 
 NEW VERSION ON NETLOGON (self-update, 1.5.1)
 --------------------------------------------

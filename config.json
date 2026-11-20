@@ -11,5 +11,11 @@
     "Proxy": "http://192.0.2.163:8080",
     "ProxyBypass": "<local>;*.contoso.local",
     "UseProxy": false,
-    "MaxRunHours": 3
+    "MaxRunHours": 3,
+    "Schedule": {
+        "Mode": "Random",
+        "Days": "Weekdays",
+        "From": "09:00",
+        "To": "14:30"
+    }
 }

@@ -2,12 +2,13 @@
 
 Free weekly app updates for Windows desktops, with only what Windows already has: PowerShell 5.1, Task Scheduler and winget. No agent, no server, no licence cost. Built for desktop admins who do not have Intune, SCCM or a patch management suite for every device, and whose users are not local admins.
 
-Current release: **1.5.1**
+Current release: **1.5.2**
 
 ## What it does
 
 - Updates machine-wide apps once a week as SYSTEM, plus an optional user task for apps installed in the user's own profile
 - Deploys with one GPO computer startup script
+- Weekly start fixed (`"Mode": "Fixed"`) or random per computer in a window, such as weekdays 09:00-14:30 (`"Mode": "Random"`), so hundreds of computers do not saturate the internet connection at the same moment
 - One central `config.json` (for example on NETLOGON), read at every run: exclude apps for every computer or per computer, replace end-of-life packages, remove older copies left next to a new version
 - Works behind a proxy, also for the SYSTEM account
 - Optional Windows message to the signed-in user with the result

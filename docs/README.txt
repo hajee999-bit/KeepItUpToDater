@@ -1,4 +1,4 @@
-KEEP IT UP TO DATER 1.5.1
+KEEP IT UP TO DATER 1.5.2
 ===========================================================
 
 Weekly automatic app updates with winget for Windows devices where users are
@@ -169,6 +169,17 @@ WHERE THINGS ARE ON A DEVICE
   the root)
 
 CHANGES
+  1.5.2  Weekly start fixed or random, set centrally in config.json:
+           "Schedule": { "Mode": "Fixed", "Day": "Tuesday", "Time": "10:00" }
+           "Schedule": { "Mode": "Random", "Days": "Weekdays",
+                         "From": "09:00", "To": "14:30" }
+         Random gives every computer its own fixed day and minute in the
+         window, worked out from its name, so 500+ computers do not all
+         download at the same moment and the slot stays the same at every
+         reinstall. The installer switch -RandomSchedule does the same with
+         weekdays 09:00-14:30. config.json overrides -DayOfWeek, -Time and
+         -RandomSchedule. A change takes effect at the next install (restart
+         with the GPO, or the next self-update).
   1.5.1  Self-update from NETLOGON: each weekly System run compares the
          installer next to the config.json on NETLOGON with its own version.
          A newer one is installed at the start of the run, with the settings

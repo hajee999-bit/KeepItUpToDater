@@ -88,7 +88,7 @@ $iast = [Management.Automation.Language.Parser]::ParseFile("$d\Install-KeepItUpT
 "installer parse errors: $($err.Count)"
 function IFn([string]$name) { ($iast.FindAll({ param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $name }, $true) | Select-Object -First 1).Extent.Text }
 foreach ($a in $iast.EndBlock.Statements) { if ($a -is [Management.Automation.Language.AssignmentStatementAst] -and "$($a.Left)" -match '^\$(IdRegex|NameRegex|ExcludeIds|ReplaceRules|RemoveOlderRules|ComputerExcludeIds|ExclusionsSource|ShowResultsCfg|UserTaskCfg|ProxyCfg|ProxyBypassCfg|UseProxyCfg|MaxRunHoursCfg|SelfUpdateCfg|TrustedSigners|InstallDir|ProgramFilesDir|Name|DisplayName|Organization|ToolVersion)$') { . ([scriptblock]::Create($a.Extent.Text)) } }
-foreach ($f in 'Read-Exclusions', 'Save-Config', 'Format-RemoveOlderRules', 'Write-ComputerExclusions', 'Write-UserTaskSetting', 'Get-RunLimitChoice', 'Format-RunHours', 'Write-RunLimitSetting', 'Write-ProxySetting') { $t = IFn $f; if ($t) { . ([scriptblock]::Create($t)) } }
+foreach ($f in 'Read-Exclusions', 'Save-Config', 'Format-RemoveOlderRules', 'Write-ComputerExclusions', 'Write-UserTaskSetting', 'Get-RunLimitChoice', 'Format-RunHours', 'Write-RunLimitSetting', 'Write-ProxySetting', 'ConvertTo-ScheduleCfg', 'Get-ScheduleSlot', 'Resolve-Schedule') { $t = IFn $f; if ($t) { . ([scriptblock]::Create($t)) } }
 $DayOfWeek = 'Tuesday'; $Time = '10:00'; $RandomDelayMinutes = 30; $MinIntervalDays = 0; $InstallTimeoutMinutes = 60; $MaxRunHours = -1
 foreach ($c in @(
     @('SC1 "SelfUpdate": false accepted and saved', '{ "ExcludeIds": [], "SelfUpdate": false }'),

@@ -9,6 +9,7 @@ The test scripts expect all files in one folder. Copy the files of the repositor
   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test148.ps1  (1.4.8 cases)
   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test150.ps1  (1.5.0 security cases)
   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test151.ps1  (1.5.1 self-update cases)
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test152.ps1  (1.5.2 fixed or random weekly start)
 
 stub.ps1 stands in for winget and fake-un.ps1 for uninstallers; nothing is installed or
 removed on the computer. Install-143.ps1 and Install-144.ps1 are older releases used by
