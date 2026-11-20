@@ -1,0 +1,167 @@
+Name                                 Id                                   Version                   Available
+-------------------------------------------------------------------------------------------------------------
+SoapUI 5.9.1                         SmartBear.SoapUI                     5.9.1                     5.10.0
+Beyond Compare 5.1.5                 ScooterSoftware.BeyondCompare.5      5.1.5.31310               5.2.7.32913
+Git                                  Git.Git                              2.51.0                    2.56.0.4
+Microsoft 365 Apps for enterprise -… Microsoft.Office                     16.0.19127.20240          16.0.20228.20124
+Microsoft OneDrive                   Microsoft.OneDrive                   26.007.0112.0002          26.183.0920.0005
+VLC media player                     VideoLAN.VLC                         3.0.17.4                  3.0.24
+Zed Attack Proxy by Checkmarx 2.16.1 ZAP.ZAP                              2.16.1                    2.17.0
+pgAdmin 4 version 9.8                PostgreSQL.pgAdmin                   9.8                       9.19
+Microsoft ODBC Driver 17 for SQL Se… Microsoft.msodbcsql.17               17.10.6.1                 17.11.1.1
+Eclipse Temurin JRE with Hotspot 17… EclipseAdoptium.Temurin.17.JRE       17.0.16.8                 17.0.21.9
+7-Zip 19.00 (x64 edition)            7zip.7zip                            19.00.00.0                26.05
+Notepad++                            Notepad++.Notepad++                  8.9.1                     8.9.8.1
+Microsoft Visual Studio Code         Microsoft.VisualStudioCode           1.104.1                   1.143.1
+Visual Studio Community 2022         Microsoft.VisualStudio.2022.Communi… 17.14.15 (September 2025) 17.14.44
+LsAgent                              Lansweeper.LsAgent                   7.2.110.3                 12.6.3.3
+Microsoft Edge                       Microsoft.Edge                       144.0.3719.115            156.0.4314.58
+Microsoft Visual C++ 2015-2022 Redi… Microsoft.VCRedist.2015+.x86         14.40.33816.0             14.51.36247.0
+Teams Machine-Wide Installer         Microsoft.Teams.Classic              1.5.0.8070                1.8.00.27654
+Microsoft Visual C++ 2015-2022 Redi… Microsoft.VCRedist.2015+.x64         14.40.33816.0             14.51.36247.0
+Adobe Acrobat Reader                 Adobe.Acrobat.Reader.32-bit          23.006.20320              26.002.22031
+MSTeams                              Microsoft.Teams                      25241.203.3947.4411       26276.513.5241.9675
+Microsoft.OutlookForWindows          Microsoft.Outlook                    1.2025.702.500            1.2026.812.100
+22 upgrades available.
+Installing dependencies:
+This package requires the following dependencies:
+  - Packages
+      Microsoft.VCRedist.2015+.x64
+(1/20) Found SoapUI [SmartBear.SoapUI] Version 5.10.0
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://dl.eviware.com/soapuios/5.10.0/SoapUI-x64-5.10.0.exe
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(2/20) Found Beyond Compare 5 [ScooterSoftware.BeyondCompare.5] Version 5.2.7.32913
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://www.scootersoftware.com/files/BCompare-5.2.7.32913.exe
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(3/20) Found Git [Git.Git] Version 2.56.0.4
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/Git-2.56.0.4-64-bit.exe
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(4/20) Found Microsoft 365 Apps for enterprise [Microsoft.Office] Version 16.0.20228.20124
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://officecdn.microsoft.com/pr/wsus/setup.exe
+Installer hash does not match; this cannot be overridden when running as admin
+(5/20) Found Microsoft OneDrive [Microsoft.OneDrive] Version 26.183.0920.0005
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://oneclient.sfx.ms/Win/Installers/26.183.0920.0005/amd64/OneDriveSetup.exe
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(6/20) Found VLC media player [VideoLAN.VLC] Version 3.0.24
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://download.videolan.org/pub/videolan/vlc/3.0.24/win64/vlc-3.0.24-win64.exe
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(7/20) Found pgAdmin 4 [PostgreSQL.pgAdmin] Version 9.19
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://ftp.postgresql.org/pub/pgadmin/pgadmin4/v9.19/windows/pgadmin4-9.19-x64.exe
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(8/20) Found Microsoft ODBC Driver 17 for SQL Server [Microsoft.msodbcsql.17] Version 17.11.1.1
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://download.microsoft.com/download/d99fcd4f-548f-46e6-83d5-b9eb62b373d5/amd64/1033/msodbcsql.msi
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(9/20) Found Eclipse Temurin JRE with Hotspot 17 [EclipseAdoptium.Temurin.17.JRE] Version 17.0.21.9
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21+9/OpenJDK17U-jre_x64_windows_hotspot_17.0.21_9.msi
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(10/20) Found 7-Zip [7zip.7zip] Version 26.05
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://github.com/ip7z/7zip/releases/download/26.05/7z2605-x64.msi
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(11/20) Found Notepad++ [Notepad++.Notepad++] Version 8.9.8.1
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.8.1/npp.8.9.8.1.Installer.x64.msi
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(12/20) Found Microsoft Visual Studio Code [Microsoft.VisualStudioCode] Version 1.143.1
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://vscode.download.prss.microsoft.com/dbazure/download/stable/e646868227c3e3a9e3f24277c8c7220be42c0be7/VSCodeSetup-x64-1.143.1.exe
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(13/20) Found Visual Studio Community 2022 [Microsoft.VisualStudio.2022.Community] Version 17.14.44
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://download.visualstudio.microsoft.com/download/pr/6bd63d7f-1818-4e03-a552-9feb11496c19/fec1b3df4cd2dd488083008dea194201f7f14574a7ce8f4eba943c9b6f4a01f3/vs_Community.exe
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(14/20) Found LsAgent [Lansweeper.LsAgent] Version 12.6.3.3
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://cdn.lansweeper.com/build/lsagent/LsAgent-windows_12.6.3.3.exe
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(15/20) Found Microsoft Visual C++ v14 Redistributable (x86) [Microsoft.VCRedist.2015+.x86] Version 14.51.36247.0
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://download.visualstudio.microsoft.com/download/pr/57eef8ae-a341-46c3-b0bc-c041027b54cd/F0BAB33A302B3CDB2E11113760D016F54FD3D2632C65BA7834FAC4F0ABD7F1A3/VC_redist.x86.exe
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(16/20) Found Microsoft Teams classic [Microsoft.Teams.Classic] Version 1.8.00.27654
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://statics.teams.cdn.office.net/production-windows-x64/1.8.00.27654/Teams_windows_x64.msi
+Successfully verified installer hash
+Starting package uninstall...
+Successfully uninstalled
+Starting package install...
+Successfully installed
+(17/20) Found Microsoft Visual C++ v14 Redistributable (x64) [Microsoft.VCRedist.2015+.x64] Version 14.51.36247.0
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://download.visualstudio.microsoft.com/download/pr/ebdab8e5-1d7b-4d9f-a11b-cbb1720c3b12/843068991DAAA1F73AD9F6239BCE4D0F6A07A51F18C37EA2A867E9BECA71295C/VC_redist.x64.exe
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(18/20) Found Adobe Acrobat Reader (32-bit) [Adobe.Acrobat.Reader.32-bit] Version 26.002.22031
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://ardownload3.adobe.com/pub/adobe/reader/win/AcrobatDC/2600222031/AcroRdrDC2600222031_MUI.exe
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+(19/20) Found Microsoft Teams [Microsoft.Teams] Version 26276.513.5241.9675
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Successfully verified installer hash
+Starting package install...
+Successfully installed. Restart the application to complete the upgrade.
+(20/20) Found Outlook for Windows [Microsoft.Outlook] Version 1.2026.812.100
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Successfully verified installer hash
+Starting package install...
+Successfully installed. Restart the application to complete the upgrade.

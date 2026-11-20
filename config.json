@@ -1,0 +1,15 @@
+{
+    "ExcludeIds": [],
+    "Replace": {
+        "OpenJS.NodeJS.*": "OpenJS.NodeJS.LTS"
+    },
+    "RemoveOlder": {
+        "SmartBear.SoapUI": "-q"
+    },
+    "ShowResults": true,
+    "UserTask": false,
+    "Proxy": "http://192.0.2.163:8080",
+    "ProxyBypass": "<local>;*.contoso.local",
+    "UseProxy": false,
+    "MaxRunHours": 3
+}

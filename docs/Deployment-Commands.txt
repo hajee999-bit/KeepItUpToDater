@@ -1,0 +1,357 @@
+KEEP IT UP TO DATER 1.5.0 - COMMANDS TO COPY AND PASTE
+=====================================================================
+Every command is one single line. See KeepItUpToDater-Manual.pdf for context.
+
+
+INSTALL BY HAND (elevated PowerShell, in the package folder)
+------------------------------------------------------------
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -RunNow
+
+With options (example):
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -DayOfWeek Tuesday -Time 10:00
+
+PC that reaches the internet only through the proxy (address in config.json, "Proxy"):
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -RunNow -UseProxy
+
+Hanging installers are stopped after 60 minutes without progress. Other limit (minutes, 0 = off):
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -InstallTimeoutMinutes 90
+
+No time limit per run on this PC (large backlog; default 3 hours, 1 to 72, 0 = no limit):
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -RunNow -MaxRunHours 0
+
+
+EXCLUSIONS AND REPLACE RULES (config.json, next to the installer)
+-----------------------------------------------------------------
+Apps that must never be updated. Use the Id column of "winget list".
+Replace: "From": "To" pairs. The System task installs To and removes From.
+From may end in .* to cover every package below that name.
+ComputerExcludeIds: extra exclusions for single computers, by computer name.
+The package ships with no exclusions and one replace rule. Example with all three:
+{
+    "ExcludeIds": [
+        "Oracle.JavaRuntimeEnvironment",
+        "Citrix.Workspace"
+    ],
+    "ComputerExcludeIds": {
+        "PC024": [ "Mobatek.MobaXterm" ],
+        "LAB-PC07": [ "Oracle.VirtualBox", "Python.Python.3.11" ]
+    },
+    "Replace": {
+        "OpenJS.NodeJS.*": "OpenJS.NodeJS.LTS"
+    }
+}
+Each ID in double quotes, commas between them, no comma after the last one.
+No replacing at all: delete the Replace part (and the comma before it).
+Keep one old Node.js on a device: exclude its ID for that computer, for example
+"ComputerExcludeIds": { "DEV-PC01": [ "OpenJS.NodeJS.18" ] }
+Computer name: as shown by "echo %COMPUTERNAME%" on that computer (at most 15
+characters, no domain). A full domain name or an app name stops the installer
+with exit code 2.
+Invalid file: installer stops with exit code 2 and keeps the current exclusions;
+install.log names the problem.
+OU with its own list: put config-finance.json next to it and add
+-ConfigFile config-finance.json to the command or Script Parameters line.
+On NETLOGON: both tasks read the file at the start of every run, so a change
+takes effect at the next run (no restart). Invalid file: the stored list is used.
+Installed from a local folder: run the installer again after a change.
+
+Older copies (manual 3.10): "RemoveOlder": "ID": "silent uninstall switches" pairs.
+After updating, the System task keeps the newest copy of each ID and uninstalls the
+older ones. The package ships with the SoapUI rule only:
+    "RemoveOlder": {
+        "SmartBear.SoapUI": "-q"
+    }
+Optional, for every package listed more than once: add "*": "" (1.5.0: only for
+packages winget updated in that run). An older copy in the same folder as the
+newest then loses only its uninstall entry (backup:
+C:\ProgramData\KeepItUpToDater\removed-entry-*.reg); a copy in a folder of its own is
+never uninstalled by "*", only listed as "Older copies left, check by hand".
+Keep the older copies of one app: "Vendor.App": "keep".
+Other uninstallers: "/S" (NSIS), "/qn /norestart" (MSI), or "" when the uninstall
+entry has its own quiet command. No removing at all: delete the RemoveOlder part.
+Check on the PC (elevated):
+Select-String -Path "C:\ProgramData\KeepItUpToDater\system.log" -Pattern "older cop|installed \d+ times|uninstall entry"
+winget list --id SmartBear.SoapUI
+winget list --id Notepad++.Notepad++
+winget list --id Ghisler.TotalCommander
+
+Uninstall (also lifts the exclusions, the winget pins the System task set):
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -Uninstall
+
+
+EXCLUSIONS FOR ONE COMPUTER ON THAT COMPUTER (local-config.json, manual chapter 3.3)
+-----------------------------------------------------------------------------------
+For computers in the GPO, prefer ComputerExcludeIds in config.json on NETLOGON (above).
+local-config.json is for computers installed by hand or outside the domain.
+Never put -AddLocalExclusion on the GPO Script Parameters line: the installer then
+only edits the local list and does not install.
+
+On that computer, elevated prompt, in the package folder:
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -AddLocalExclusion Oracle.VirtualBox
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -RemoveLocalExclusion Oracle.VirtualBox
+
+From NETLOGON on a domain computer (elevated prompt on that computer):
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "\\contoso.local\NETLOGON\KeepItUpToDater\Install-KeepItUpToDater.ps1" -AddLocalExclusion Oracle.VirtualBox
+
+From an admin workstation (a remote session cannot read NETLOGON, so copy the installer first):
+Copy-Item .\Install-KeepItUpToDater.ps1 \\PC-001\C$\Windows\Temp\
+Invoke-Command -ComputerName PC-001 { powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Windows\Temp\Install-KeepItUpToDater.ps1 -AddLocalExclusion Oracle.VirtualBox }
+
+Several IDs: separate them with commas, for example -AddLocalExclusion Oracle.VirtualBox,Mobatek.MobaXterm
+Only C:\ProgramData\KeepItUpToDater\local-config.json changes; nothing is reinstalled.
+Both tasks use it from their next run, on top of config.json. It also blocks replace rules.
+The file stays on reinstall (also by the GPO) and uninstall. Removing the last ID deletes it.
+Do not create the file by hand: the updater ignores it unless SYSTEM or Administrators own it.
+
+Show all lists (all computers, and this computer from config.json and local-config.json):
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -Status
+or: type C:\ProgramData\KeepItUpToDater\local-config.json
+
+
+GROUP POLICY ROLLOUT
+-----------------------------------
+1. Copy Install-KeepItUpToDater.ps1 and config.json to:
+   \\contoso.local\NETLOGON\KeepItUpToDater\
+   NTFS: computers read, only domain admins write.
+   Change exclusions in that config.json; both tasks pick it up at their next run.
+
+2. Create the GPO "Keep It Up To Dater" (do not link it yet, first do the filtering below), then edit:
+   Computer Configuration > Policies > Windows Settings > Scripts (Startup/Shutdown) > Startup
+   Tab "Scripts" (not "PowerShell Scripts") > Add
+
+   Script Name:
+   %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe
+
+   Script Parameters:
+   -NoProfile -ExecutionPolicy Bypass -File "\\contoso.local\NETLOGON\KeepItUpToDater\Install-KeepItUpToDater.ps1"
+
+   Script Parameters with settings (example):
+   -NoProfile -ExecutionPolicy Bypass -File "\\contoso.local\NETLOGON\KeepItUpToDater\Install-KeepItUpToDater.ps1" -DayOfWeek Tuesday -Time 10:00
+
+   Script Parameters for the PCs behind the proxy, on a separate GPO that those PCs get
+   INSTEAD of the general one (a PC with both: the last install decides):
+   -NoProfile -ExecutionPolicy Bypass -File "\\contoso.local\NETLOGON\KeepItUpToDater\Install-KeepItUpToDater.ps1" -UseProxy
+   Simpler: one GPO for all PCs, and "UseProxy" with their names in config.json.
+
+   Script Parameters to remove it (let computers restart, then unlink the GPO):
+   -NoProfile -ExecutionPolicy Bypass -File "\\contoso.local\NETLOGON\KeepItUpToDater\Install-KeepItUpToDater.ps1" -Uninstall
+
+3. Recommended for laptops:
+   Computer Configuration > Policies > Administrative Templates > System > Logon >
+   "Always wait for the network at computer startup and logon" = Enabled
+
+4. Test on a pilot computer (startup scripts only run at startup):
+   gpupdate /force
+   (restart)
+   gpresult /r /scope computer
+   type C:\ProgramData\KeepItUpToDater\install.log
+
+
+LIMIT THE ROLLOUT TO CHOSEN COMPUTERS (security filtering, manual chapter 7.3)
+--------------------------------------------------------------------------
+GUI:
+1. Active Directory Users and Computers: create a security group, scope Global, e.g. GG-KIUTD-Pilot.
+   Members > Add > Object Types > tick Computers > enter the chosen computer names.
+2. Group Policy Management > GPO "Keep It Up To Dater" > Scope tab > Security Filtering:
+   remove Authenticated Users, add GG-KIUTD-Pilot.
+3. Delegation tab: Domain Computers (or Authenticated Users) must keep Read.
+4. Link the GPO to the OU that contains the workstations.
+5. Restart the chosen PCs (once more if the tasks do not appear).
+
+PowerShell (admin workstation with RSAT ActiveDirectory and GroupPolicy modules).
+Replace the OU paths and computer names with your own:
+New-ADGroup -Name "GG-KIUTD-Pilot" -GroupScope Global -GroupCategory Security -Path "OU=Groups,DC=contoso,DC=local" -Description "Keep It Up To Dater pilot computers"
+Add-ADGroupMember -Identity "GG-KIUTD-Pilot" -Members (Get-ADComputer "PC-001"), (Get-ADComputer "PC-002")
+Set-GPPermission -Name "Keep It Up To Dater" -TargetName "GG-KIUTD-Pilot" -TargetType Group -PermissionLevel GpoApply
+Set-GPPermission -Name "Keep It Up To Dater" -TargetName "Authenticated Users" -TargetType Group -PermissionLevel GpoRead -Replace
+New-GPLink -Name "Keep It Up To Dater" -Target "OU=Workstations,DC=contoso,DC=local"
+(The -Replace line keeps Read for Authenticated Users but removes Apply. On a Dutch-language
+domain controller the group is called "Geverifieerde gebruikers".)
+
+Check the scope on a computer:
+gpresult /r /scope computer
+   chosen PC: GPO listed under "Applied Group Policy Objects"
+   other PC:  GPO listed under the filtered-out GPOs with "Denied (Security)"
+
+Add a PC to the pilot group (then restart it):
+Add-ADGroupMember -Identity "GG-KIUTD-Pilot" -Members (Get-ADComputer "PC-003")
+
+Remove a PC from the pilot group:
+Remove-ADGroupMember -Identity "GG-KIUTD-Pilot" -Members (Get-ADComputer "PC-001") -Confirm:$false
+and on that PC, as administrator: Uninstall.cmd
+(Leaving the group only stops the startup script; it does not remove the tasks.)
+
+
+CHECKS ON A DEVICE
+------------------
+Status of both tasks, last results and logs (works where Group Policy blocks
+the Task Scheduler console; run as administrator to also see the System task):
+Status.cmd
+or: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -Status
+
+The tasks without the console (elevated prompt):
+schtasks /query /tn "\KeepItUpToDater\System" /v /fo list
+schtasks /query /tn "\KeepItUpToDater\User" /v /fo list
+schtasks /run /tn "\KeepItUpToDater\System"
+The task definitions are stored in C:\Windows\System32\Tasks\KeepItUpToDater\
+
+What would be updated for the current user (changes nothing, no admin needed):
+powershell -ExecutionPolicy Bypass -File "C:\Program Files\KeepItUpToDater\Invoke-KeepItUpToDater.ps1" -Mode User -ListOnly
+
+Run the user update now, also if this week's run already finished (no admin needed):
+powershell -ExecutionPolicy Bypass -File "C:\Program Files\KeepItUpToDater\Invoke-KeepItUpToDater.ps1" -Mode User -Force
+
+A run that is still busy (Status.cmd shows Running) ignores a new start. End it (elevated):
+schtasks /end /tn "\KeepItUpToDater\System"
+Then check for an installer that kept running and stop it if needed:
+Get-Process -IncludeUserName | Where-Object { $_.UserName -match 'SYSTEM' } | Sort-Object StartTime | Format-Table Id, Name, StartTime
+
+Allow a new System run when testing (elevated), then start it:
+Remove-Item "C:\ProgramData\KeepItUpToDater\system.lastrun"
+schtasks /run /tn "\KeepItUpToDater\System"
+Or run the installer with -RunNow (Install.cmd): that run ignores the once-per-week rule.
+
+Which apps asked for a restart of the PC (elevated):
+Select-String -Path "C:\ProgramData\KeepItUpToDater\system.log" -Pattern "Restart your PC|Restart the PC"
+
+Result messages for the user (manual 3.6), in config.json next to the installer (NETLOGON):
+    "ShowResults": true                      every computer that uses this file
+    "ShowResults": [ "PC024", "PC-002" ]    only these computers (%COMPUTERNAME%)
+    "ShowResults": false                     silent (also when the key is left out)
+Or on one computer: add -ShowResults to the installer (GPO line or Install.cmd -ShowResults).
+The SYSTEM task shows the messages (Windows message service). Who got them (elevated):
+Select-String -Path "C:\ProgramData\KeepItUpToDater\system.log", "C:\ProgramData\KeepItUpToDater\notify.log" -Pattern "message"
+
+User task off, for PCs where standard users cannot run PowerShell (AppLocker), in config.json:
+    "UserTask": false
+Or on one computer: add -NoUserTask to the installer. Takes effect at the next install
+(GPO: next startup). Apps installed in a user's own profile are then not updated.
+AppLocker blocks of PowerShell in the last 14 days: Status.cmd (elevated), line "Policy", or:
+Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-AppLocker/EXE and DLL'; Id=8004; StartTime=(Get-Date).AddDays(-14)} | Format-Table TimeCreated, UserId, Message -Wrap
+
+Proxy, for PCs that reach the internet only through one (manual 3.8), in config.json:
+    "Proxy": "http://192.0.2.163:8080",
+    "ProxyBypass": "<local>;*.contoso.local",
+    "UseProxy": false                        the address is there, used on no PC
+    "UseProxy": [ "VM-*", "PC-002" ]         only these PCs (%COMPUTERNAME%, * and ? allowed)
+    "UseProxy": true                         every PC that uses this file
+Or on one PC: add -UseProxy to the installer (Install.cmd -UseProxy). With a GPO, the
+names in config.json are simplest; a separate GPO with -UseProxy only works when those PCs
+do not also get the general GPO. The System task sets winget's DefaultProxy, the WinHTTP proxy and SYSTEM's
+internet settings (only where nothing else is set) and removes them again when it is off.
+Check on the PC (elevated):
+Select-String -Path "C:\ProgramData\KeepItUpToDater\system.log" -Pattern "Proxy"
+netsh winhttp show proxy
+winget settings export
+Does this PC need the proxy? Direct fails and through the user's proxy works:
+Test-NetConnection cdn.winget.microsoft.com -Port 443
+Invoke-WebRequest https://cdn.winget.microsoft.com/cache/source2.msix -Method Head -UseBasicParsing
+
+Time limit per run (manual 3.9), in config.json; default 3 hours:
+    "MaxRunHours": 8                         1 to 72 hours
+    "MaxRunHours": 0                         no limit, for the first runs with a large backlog
+A change on NETLOGON reaches a PC at its next startup, or without a restart at its next run,
+which sets both tasks to it for the runs after it.
+A run stopped by the limit is not counted: the System task runs again 15 minutes after
+the next startup. Check on the PC (elevated):
+Status.cmd                                   line "Run limit"
+schtasks /query /tn "\KeepItUpToDater\System" /xml | findstr ExecutionTimeLimit
+   PT3H = 3 hours, PT8H = 8 hours, PT0S = no limit
+Select-String -Path "C:\ProgramData\KeepItUpToDater\system.log" -Pattern "Time limit|did not finish"
+
+Test the scheduling (elevated, in the package folder): the System task (and the User
+task when it is on) starts by itself in 5 minutes, once. Do not combine with -RunNow.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -TestSchedule 5
+Afterwards:
+Select-String -Path "C:\ProgramData\KeepItUpToDater\system.log" -Pattern "Started by the test schedule"
+Select-String -Path "$env:LOCALAPPDATA\KeepItUpToDater\user.log" -Pattern "Started by the test schedule"
+schtasks /query /tn "\KeepItUpToDater\System" /v /fo list | findstr /i "Last"
+
+Show the result message of the last System run again (elevated; within 12 hours of the run):
+del "C:\ProgramData\KeepItUpToDater\notify.sent"
+schtasks /run /tn "\KeepItUpToDater\Notify"
+
+Which apps winget listed but did not update, and apps to start again (elevated):
+Select-String -Path "C:\ProgramData\KeepItUpToDater\system.log" -Pattern "Listed by winget|another version|Close and start"
+
+Why winget did not update a listed app, for example GnuPG (elevated):
+winget show --id GnuPG.GnuPG --version 2.5.24
+winget list --id GnuPG.GnuPG
+  Compare Installer Type and Scope of the newer version with the installed one.
+winget upgrade --id GnuPG.GnuPG --exact --scope machine --verbose-logs
+  winget gives its reason; winget --logs opens the folder with the detailed log.
+
+Which run did not finish, and which app it was busy with (elevated):
+Select-String -Path "C:\ProgramData\KeepItUpToDater\system.log" -Pattern "did not finish"
+
+Which packages were replaced (elevated):
+Select-String -Path "C:\ProgramData\KeepItUpToDater\system.log" -Pattern "Replac"
+
+Which Node.js packages winget sees on this device:
+winget list --name Node.js
+
+Run summaries of the last 8 days:
+Get-WinEvent -FilterHashtable @{LogName='Application'; ProviderName='KeepItUpToDater'; StartTime=(Get-Date).AddDays(-8)} | Format-Table TimeCreated, Id, LevelDisplayName, Message -Wrap
+
+Is winget registered on this device (elevated):
+Get-AppxPackage -AllUsers Microsoft.DesktopAppInstaller
+
+Repair winget's catalogue (error 0x8A15000F "Data required by the source is missing",
+"Failed when opening source(s)"). The tasks do this by themselves.
+For a user: start CheckUpdates.cmd normally, as that user (no admin rights needed).
+It runs "winget source update" and, if needed, installs the catalogue package
+Microsoft.Winget.Source directly. If it still fails, the window shows the cause.
+For the System task, elevated prompt (removes sources added by hand on that device):
+winget source reset --force
+winget source update
+Is the catalogue package installed for the current user?
+powershell -Command "Get-AppxPackage Microsoft.Winget.Source"
+
+Machine proxy used by the SYSTEM task:
+netsh winhttp show proxy
+
+Visual C++ runtime that winget needs as SYSTEM (the System task installs it when missing):
+dir %WINDIR%\System32\vcruntime140.dll %WINDIR%\System32\msvcp140.dll
+Install it by hand (elevated, file from https://aka.ms/vc14/vc_redist.x64.exe):
+vc_redist.x64.exe /install /quiet /norestart
+Turn the automatic install off: add -NoVCRuntime to the install command or GPO line.
+
+
+CODE SIGNING (when AllSigned, AppLocker or WDAC is enforced)
+------------------------------------------------------------
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -ExportRunner C:\Temp\KIUTD-export
+Set-AuthenticodeSignature -FilePath C:\Temp\KIUTD-export\Invoke-KeepItUpToDater.ps1 -Certificate $cert -TimestampServer <your timestamp URL>
+Set-AuthenticodeSignature -FilePath .\Install-KeepItUpToDater.ps1 -Certificate $cert -TimestampServer <your timestamp URL>
+Copy-Item C:\Temp\KIUTD-export\Invoke-KeepItUpToDater.ps1 .\
+(The installer deploys a signed Invoke-KeepItUpToDater.ps1 that sits next to it instead of its built-in copy.)
+With Group Policy: put both signed files in \\contoso.local\NETLOGON\KeepItUpToDater\
+
+SECURITY (1.5.0, security review of 19 Nov 2026)
+Folders: the installer refuses junctions or symbolic links and makes Administrators
+the owner of both folders; only SYSTEM and Administrators can change them, Users can
+read. Check on a PC (elevated):
+icacls "C:\Program Files\KeepItUpToDater"
+icacls "C:\ProgramData\KeepItUpToDater"
+Expected: NT AUTHORITY\SYSTEM:(OI)(CI)(F), BUILTIN\Administrators:(OI)(CI)(F),
+BUILTIN\Users:(OI)(CI)(RX), nothing else, and no (I) entries on the folders.
+
+Task result (Status.cmd, Task Scheduler "Last Run Result"):
+0x0 all done; 0x2 finished, but some updates failed or there were warnings (failed
+updates are tried again at a later start on another day, at most twice before the
+next weekly run); 0x1 did not finish or did not start, see system.log.
+Monitoring: event 1000 OK, 1001 warning, 1002 error in the Application log, source
+KeepItUpToDater.
+
+Signed updater (when AllSigned, AppLocker or WDAC requires signed scripts):
+sign Invoke-KeepItUpToDater.ps1 (export it with -ExportRunner) and put it next to
+the installer. It is only used with a valid signature from the installer's own
+signer or a thumbprint in config.json:
+    "TrustedSigners": [ "0123456789ABCDEF0123456789ABCDEF01234567" ]
+The tasks then run it with -ExecutionPolicy AllSigned. An unsigned or unknown file
+next to the installer stops the install (exit code 2).
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -ExportRunner .\signed
+Set-AuthenticodeSignature -FilePath .\signed\Invoke-KeepItUpToDater.ps1 -Certificate (Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert)[0] -TimestampServer http://timestamp.digicert.com
+
+Installed config.json: if it is missing or damaged, the runs use
+config.lastgood.json next to it; without that they stop with event 1002 and change
+nothing. Installing again (the GPO at the next start) writes both.
