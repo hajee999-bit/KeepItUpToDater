@@ -1,6 +1,6 @@
 KEEP IT UP TO DATER 1.5.0 - COMMANDS TO COPY AND PASTE
 =====================================================================
-Every command is one single line. See KeepItUpToDater-Manual.pdf for context.
+Every command is one single line.
 
 
 INSTALL BY HAND (elevated PowerShell, in the package folder)
@@ -55,7 +55,7 @@ On NETLOGON: both tasks read the file at the start of every run, so a change
 takes effect at the next run (no restart). Invalid file: the stored list is used.
 Installed from a local folder: run the installer again after a change.
 
-Older copies (manual 3.10): "RemoveOlder": "ID": "silent uninstall switches" pairs.
+Older copies: "RemoveOlder": "ID": "silent uninstall switches" pairs.
 After updating, the System task keeps the newest copy of each ID and uninstalls the
 older ones. The package ships with the SoapUI rule only:
     "RemoveOlder": {
@@ -79,7 +79,7 @@ Uninstall (also lifts the exclusions, the winget pins the System task set):
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -Uninstall
 
 
-EXCLUSIONS FOR ONE COMPUTER ON THAT COMPUTER (local-config.json, manual chapter 3.3)
+EXCLUSIONS FOR ONE COMPUTER ON THAT COMPUTER (local-config.json)
 -----------------------------------------------------------------------------------
 For computers in the GPO, prefer ComputerExcludeIds in config.json on NETLOGON (above).
 local-config.json is for computers installed by hand or outside the domain.
@@ -147,7 +147,7 @@ GROUP POLICY ROLLOUT
    type C:\ProgramData\KeepItUpToDater\install.log
 
 
-LIMIT THE ROLLOUT TO CHOSEN COMPUTERS (security filtering, manual chapter 7.3)
+LIMIT THE ROLLOUT TO CHOSEN COMPUTERS (security filtering)
 --------------------------------------------------------------------------
 GUI:
 1. Active Directory Users and Computers: create a security group, scope Global, e.g. GG-KIUTD-Pilot.
@@ -214,7 +214,7 @@ Or run the installer with -RunNow (Install.cmd): that run ignores the once-per-w
 Which apps asked for a restart of the PC (elevated):
 Select-String -Path "C:\ProgramData\KeepItUpToDater\system.log" -Pattern "Restart your PC|Restart the PC"
 
-Result messages for the user (manual 3.6), in config.json next to the installer (NETLOGON):
+Result messages for the user, in config.json next to the installer (NETLOGON):
     "ShowResults": true                      every computer that uses this file
     "ShowResults": [ "PC024", "PC-002" ]    only these computers (%COMPUTERNAME%)
     "ShowResults": false                     silent (also when the key is left out)
@@ -229,7 +229,7 @@ Or on one computer: add -NoUserTask to the installer. Takes effect at the next i
 AppLocker blocks of PowerShell in the last 14 days: Status.cmd (elevated), line "Policy", or:
 Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-AppLocker/EXE and DLL'; Id=8004; StartTime=(Get-Date).AddDays(-14)} | Format-Table TimeCreated, UserId, Message -Wrap
 
-Proxy, for PCs that reach the internet only through one (manual 3.8), in config.json:
+Proxy, for PCs that reach the internet only through one, in config.json:
     "Proxy": "http://192.0.2.163:8080",
     "ProxyBypass": "<local>;*.contoso.local",
     "UseProxy": false                        the address is there, used on no PC
@@ -247,7 +247,7 @@ Does this PC need the proxy? Direct fails and through the user's proxy works:
 Test-NetConnection cdn.winget.microsoft.com -Port 443
 Invoke-WebRequest https://cdn.winget.microsoft.com/cache/source2.msix -Method Head -UseBasicParsing
 
-Time limit per run (manual 3.9), in config.json; default 3 hours:
+Time limit per run, in config.json; default 3 hours:
     "MaxRunHours": 8                         1 to 72 hours
     "MaxRunHours": 0                         no limit, for the first runs with a large backlog
 A change on NETLOGON reaches a PC at its next startup, or without a restart at its next run,

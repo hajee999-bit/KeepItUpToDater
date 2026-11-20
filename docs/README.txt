@@ -7,26 +7,26 @@ Scheduler and winget. Nothing else is installed, except the Microsoft
 Visual C++ runtime on a device that lacks it (winget needs it).
 
 QUICK START ON A TEST DEVICE
-1. Right-click the zip > Properties > tick Unblock > OK. Then extract it.
-2. Optional: double-click CheckUpdates.cmd to see what is outdated.
-   Apps that must never be updated: add their winget IDs to config.json
-   (manual chapter 3.3). It ships with an empty list. An exclusion for one
-   computer only: see EXCLUSIONS FOR ONE COMPUTER below.
-   config.json also replaces end-of-life Node.js versions with the current
-   Node.js LTS (manual chapter 3.5). Remove the Replace rule if you do not want that.
-   It also removes older SoapUI copies left next to the newest one (manual
-   chapter 3.10). The same for every package ("*") is off unless you add it,
-   see REMOVING OLDER COPIES.
-3. Right-click Install.cmd > Run as administrator.
-   This installs and starts the first update run (machine-wide apps).
-   PC that reaches the internet only through the proxy (for example the
-   ESX VMs): run it from PowerShell as administrator, in this folder, as
+1. Get the files: git clone https://github.com/hajee999-bit/KeepItUpToDater.git
+   (or GitHub Desktop: File > Clone repository). Run the steps below from
+   that folder; the .cmd files and the installer are in its root.
+2. Optional: double-click CheckUpdates.cmd to see what is outdated. Apps that
+   must never be updated: add their winget IDs to config.json. It ships with an
+   empty list. An exclusion for one computer only: see EXCLUSIONS FOR ONE
+   COMPUTER below. config.json also replaces end-of-life Node.js versions with
+   the current Node.js LTS. Remove the Replace rule if you do not want that. It
+   also removes older SoapUI copies left next to the newest one. The same for
+   every package ("*") is off unless you add it, see REMOVING OLDER COPIES.
+3. Right-click Install.cmd > Run as administrator. This installs and starts the
+   first update run (machine-wide apps). PC that reaches the internet only
+   through the proxy: run it from PowerShell as administrator, in this folder,
+   as
        .\Install.cmd -UseProxy
    See PCS BEHIND A PROXY below.
 4. The signed-in user gets a Windows message when the first app starts
    updating, and one at the end with what was updated and what could not be.
-   This is "ShowResults": true in config.json, on in the example config.json; set it to false
-   for silent runs (manual chapter 3.6). The SYSTEM task shows these messages
+   This is "ShowResults": true in config.json, on in the example config.json;
+   set it to false for silent runs. The SYSTEM task shows these messages
    itself, so they also work where AppLocker blocks PowerShell and .cmd files
    for standard users. Who signs in later gets the last result at sign-in.
    system.log names who got each message. Or double-click ShowLogs.cmd.
@@ -34,21 +34,21 @@ QUICK START ON A TEST DEVICE
    their last result, AppLocker blocks and the log locations. It also works
    where Group Policy blocks the Task Scheduler console.
 5. User task: off in the example config.json ("UserTask": false), because on
-   contoso.local standard users cannot run PowerShell, and the user task runs
-   PowerShell as the user. On PCs without that block, set "UserTask": true:
-   15 minutes after sign-in it updates the apps in that user's own profile.
+   many managed PCs standard users cannot run PowerShell, and the user task
+   runs PowerShell as the user. On PCs without that block, set "UserTask":
+   true: 15 minutes after sign-in it updates the apps in that user's own
+   profile.
 6. Test the scheduling: right-click TestSchedule.cmd > Run as administrator.
    Task Scheduler then starts the System task by itself 5 minutes later, once
    (also the User task when it is on). Afterwards Status.cmd shows that time
-   as its last run, and the user gets both messages (manual 5.6).
+   as its last run, and the user gets both messages.
 7. Right-click Uninstall.cmd > Run as administrator to remove it again. This
    also lifts the exclusions (winget pins) the System task set.
 
 ROLLOUT
-With a GPO computer startup script, see chapter 7 of the manual and
-Deployment-Commands.txt.
+With a GPO computer startup script, see Deployment-Commands.txt.
 For a first rollout, limit the GPO to the PCs you choose with a computer group and
-security filtering (manual chapter 7.3).
+security filtering.
 
 FILES
   Install-KeepItUpToDater.ps1   Installer
@@ -66,7 +66,7 @@ FILES
   Status.cmd                    Tasks, last results, log locations; no console needed
   Deployment-Commands.txt       GPO rollout and other commands to copy
 
-EXCLUSIONS FOR ONE COMPUTER (manual chapter 3.3)
+EXCLUSIONS FOR ONE COMPUTER
 ExcludeIds in config.json applies to every computer. Two ways to add an
 exclusion for one computer only; both add to ExcludeIds:
 1. Centrally, per computer name, in the same config.json (NETLOGON). Both
@@ -75,13 +75,15 @@ exclusion for one computer only; both add to ExcludeIds:
            "PC024": [ "Mobatek.MobaXterm" ]
        }
 2. On the computer itself, as administrator (package folder or NETLOGON):
-       powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -AddLocalExclusion Oracle.VirtualBox
-       powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -RemoveLocalExclusion Oracle.VirtualBox
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+   .\Install-KeepItUpToDater.ps1 -AddLocalExclusion Oracle.VirtualBox
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+   .\Install-KeepItUpToDater.ps1 -RemoveLocalExclusion Oracle.VirtualBox
    Several IDs: separate them with commas. This only edits
    C:\ProgramData\KeepItUpToDater\local-config.json (only administrators can
    change it); nothing is reinstalled. The file stays when the tool is
-   installed again or removed. Not for the GPO line: there the installer
-   would only edit the local list and not install.
+   installed again or removed. Not for the GPO line: there the installer would
+   only edit the local list and not install.
 Status.cmd shows all lists: all computers, and this computer from config.json
 and from local-config.json.
 
@@ -92,27 +94,27 @@ the current LTS:
     "Replace": { "OpenJS.NodeJS.*": "OpenJS.NodeJS.LTS" }
 The System task installs the LTS version and removes the old version only when it
 is still installed next to it. Excluded packages are not replaced. Tested with
-Node.js 4.8.7 up to 23.11.0 (manual chapter 3.5).
+Node.js 4.8.7 up to 23.11.0.
 
-REMOVING OLDER COPIES (manual chapter 3.10)
+REMOVING OLDER COPIES
 Some installers put a new version next to the old one instead of replacing it
 (SoapUI: a folder per version, each with its own Java). winget lists every copy
 under the same ID but only ever updates the newest, so the older copies stay.
 The shipped config.json removes them for SoapUI:
     "RemoveOlder": { "SmartBear.SoapUI": "-q" }
 After the update pass the System task keeps the newest copy of each listed ID
-and deals with the older ones. Nothing is removed when the update of that
-app failed in this run, after an unexpected winget result, or when the newest
-copy has no uninstall entry of its own (1.5.0). The value holds the switches that make that
-app's uninstaller silent: -q for SoapUI, /S for most NSIS installers,
+and deals with the older ones. Nothing is removed when the update of that app
+failed in this run, after an unexpected winget result, or when the newest copy
+has no uninstall entry of its own (1.5.0). The value holds the switches that
+make that app's uninstaller silent: -q for SoapUI, /S for most NSIS installers,
 /qn /norestart for MSI. An uninstall entry with its own quiet command uses
 that, so the value may be "". Excluded IDs are skipped. system.log and the
 result message list what was removed; a copy that could not be removed makes
-the run end with a warning (event 1001).
-Optional: "*" for every package, "RemoveOlder": { "*": "", "SmartBear.SoapUI": "-q" }.
-Since 1.5.0 it only looks at packages winget updated successfully in that run,
-and it never uninstalls anything (PC396: winget installed Unity 2020 next to
-Unity 2018 and 1.4.8 then uninstalled Unity 2018):
+the run end with a warning (event 1001). Optional: "*" for every package,
+"RemoveOlder": { "*": "", "SmartBear.SoapUI": "-q" }. Since 1.5.0 it only looks
+at packages winget updated successfully in that run, and it never uninstalls
+anything (PC396: winget installed Unity 2020 next to Unity 2018 and 1.4.8 then
+uninstalled Unity 2018):
 - Same folder as the newest copy (Notepad++ 7.8.1 next to 8.9.9, Total
   Commander 9.51 next to 11.58.1): the update already replaced its files and
   its uninstaller would delete the new ones. Only its uninstall entry is
@@ -120,12 +122,12 @@ Unity 2018 and 1.4.8 then uninstalled Unity 2018):
   (double-click to put it back).
 - A folder of its own, or folder unknown: left alone and listed in system.log
   and the summary as "Older copies left, check by hand". A rule for that ID
-  uninstalls it.
-Keep the older copies of one app: "RemoveOlder": { "*": "", "Vendor.App": "keep" }
-See what "*" would do on a PC, changing nothing (as administrator):
-    powershell -ExecutionPolicy Bypass -File "C:\Program Files\KeepItUpToDater\Invoke-KeepItUpToDater.ps1" -Mode System -ListOnly
+  uninstalls it. Keep the older copies of one app: "RemoveOlder": { "*": "",
+  "Vendor.App": "keep" } See what "*" would do on a PC, changing nothing (as
+  administrator): powershell -ExecutionPolicy Bypass -File "C:\Program
+  Files\KeepItUpToDater\Invoke-KeepItUpToDater.ps1" -Mode System -ListOnly
 
-PCS BEHIND A PROXY (manual chapter 3.8)
+PCS BEHIND A PROXY
 The SYSTEM account does not use the user's proxy settings. On a PC that
 reaches the internet only through a proxy, the System task then fails with
 0x8A15000F and "Download location NOT reachable". The address is in
@@ -144,7 +146,7 @@ SYSTEM's internet settings, only where nothing else is set, and removes these
 settings again when the proxy is turned off or the tool is removed.
 Status.cmd shows the line Proxy.
 
-TIME LIMIT PER RUN (manual chapter 3.9)
+TIME LIMIT PER RUN
 Task Scheduler stops a run after 3 hours. A stopped run is not counted: the
 System task starts again 15 minutes after the next startup and goes on with
 the apps that are left. For the first runs on PCs with many outdated apps,
@@ -162,8 +164,9 @@ WHERE THINGS ARE ON A DEVICE
   C:\ProgramData\KeepItUpToDater       install.log, system.log, notify.log,
                                        local-config.json, proxy.json
                                        (hidden folder: type the path in Explorer)
-  %LOCALAPPDATA%\KeepItUpToDater       user.log of the signed-in user
-  Task Scheduler folder \KeepItUpToDater\   Tasks System, User and Notify (not in the root)
+  %LOCALAPPDATA%\KeepItUpToDater       user.log of the signed-in user Task
+  Scheduler folder \KeepItUpToDater\   Tasks System, User and Notify (not in
+  the root)
 
 CHANGES
   1.5.0  Fixes from the security review of 19 Nov 2026 (findings F-01 to F-09,
@@ -226,7 +229,7 @@ CHANGES
          -TestSchedule and TestSchedule.cmd to test the scheduling.
   1.4.2  Once per week: a catch-up run late in the week no longer makes the
          next weekly run skip. The week begins two days before the scheduled
-         day (Monday 12:00 for Wednesday 12:00); manual chapter 3.2.
+         day (Monday 12:00 for Wednesday 12:00).
          The run summary names apps winget listed but did not update (GnuPG,
          MobaXterm on PC024), apps to start again (Outlook, WSL) and a
          previous run that did not finish.
@@ -243,6 +246,5 @@ CHANGES
   1.2.1  Apps delivered in a zip file (TeamViewer) now install as SYSTEM.
   1.2.0  Visual C++ runtime installed automatically when missing. Exclusions
          read from NETLOGON at every run: a changed config.json needs no restart.
-  Full changelog: manual, Appendix B.
 
 Questions: open an issue in this repository.
