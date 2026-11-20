@@ -3,7 +3,7 @@ KEEP IT UP TO DATER 1.5.0 - COMMANDS TO COPY AND PASTE
 Every command is one single line.
 
 
-INSTALL BY HAND (elevated PowerShell, in the package folder)
+INSTALL BY HAND (elevated PowerShell, in the cloned folder)
 ------------------------------------------------------------
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -RunNow
 
@@ -26,7 +26,7 @@ Apps that must never be updated. Use the Id column of "winget list".
 Replace: "From": "To" pairs. The System task installs To and removes From.
 From may end in .* to cover every package below that name.
 ComputerExcludeIds: extra exclusions for single computers, by computer name.
-The package ships with no exclusions and one replace rule. Example with all three:
+config.json ships with no exclusions and one replace rule. Example with all three:
 {
     "ExcludeIds": [
         "Oracle.JavaRuntimeEnvironment",
@@ -57,7 +57,7 @@ Installed from a local folder: run the installer again after a change.
 
 Older copies: "RemoveOlder": "ID": "silent uninstall switches" pairs.
 After updating, the System task keeps the newest copy of each ID and uninstalls the
-older ones. The package ships with the SoapUI rule only:
+older ones. config.json ships with the SoapUI rule only:
     "RemoveOlder": {
         "SmartBear.SoapUI": "-q"
     }
@@ -86,7 +86,7 @@ local-config.json is for computers installed by hand or outside the domain.
 Never put -AddLocalExclusion on the GPO Script Parameters line: the installer then
 only edits the local list and does not install.
 
-On that computer, elevated prompt, in the package folder:
+On that computer, elevated prompt, in the cloned folder:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -AddLocalExclusion Oracle.VirtualBox
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -RemoveLocalExclusion Oracle.VirtualBox
 
@@ -259,7 +259,7 @@ schtasks /query /tn "\KeepItUpToDater\System" /xml | findstr ExecutionTimeLimit
    PT3H = 3 hours, PT8H = 8 hours, PT0S = no limit
 Select-String -Path "C:\ProgramData\KeepItUpToDater\system.log" -Pattern "Time limit|did not finish"
 
-Test the scheduling (elevated, in the package folder): the System task (and the User
+Test the scheduling (elevated, in the cloned folder): the System task (and the User
 task when it is on) starts by itself in 5 minutes, once. Do not combine with -RunNow.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -TestSchedule 5
 Afterwards:

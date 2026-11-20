@@ -74,7 +74,7 @@ exclusion for one computer only; both add to ExcludeIds:
        "ComputerExcludeIds": {
            "PC024": [ "Mobatek.MobaXterm" ]
        }
-2. On the computer itself, as administrator (package folder or NETLOGON):
+2. On the computer itself, as administrator (cloned folder or NETLOGON):
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File
    .\Install-KeepItUpToDater.ps1 -AddLocalExclusion Oracle.VirtualBox
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File
