@@ -188,8 +188,7 @@ CHANGES
          startup script). One try per day per version; "SelfUpdate": false in
          config.json turns it off. With a signed updater or TrustedSigners the
          new installer must be signed by an approved signer.
-  1.5.0  Fixes from the security review of 19 Nov 2026 (findings F-01 to F-09,
-         see Security-Remediation-1.5.0.txt):
+  1.5.0  Fixes from the security review of 19 Nov 2026 (findings F-01 to F-09):
          - Program and data folders: no junctions or symbolic links, owned by
            Administrators, only SYSTEM and Administrators can change them;
            checked again after setting, and by the System task at each run.

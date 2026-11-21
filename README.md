@@ -54,6 +54,7 @@ Put `Install-KeepItUpToDater.ps1` and `config.json` in a share all computers can
 
 | File | Contents |
 |---|---|
+| [CHANGELOG.md](CHANGELOG.md) | What changed in each version |
 | [docs/README.txt](docs/README.txt) | Quick start, configuration options, proxy, time limit, change log |
 | [docs/Deployment-Commands.txt](docs/Deployment-Commands.txt) | GPO rollout and other commands to copy and paste, security checks |
 | [tests/README.txt](tests/README.txt) | How to run the test scripts |
