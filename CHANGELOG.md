@@ -3,6 +3,19 @@
 All changes to Keep It Up To Dater, newest first. The same list is in
 docs/README.txt under CHANGES.
 
+## 1.5.3
+
+- -DayOfWeek and -Time on the command line win over "Schedule" in config.json
+  (and over -RandomSchedule) for that computer. One config.json with "Schedule"
+  for most computers, and a GPO with `-DayOfWeek Tuesday -Time 10:00` for the
+  exceptions (proxy VMs). Left out, "Schedule" decides as in 1.5.2.
+- Only -Time: the day is Wednesday; only -DayOfWeek: the time is 12:00.
+- The self-update passes day and time on only when they were given on the
+  command line (ScheduleParams in the installed config.json). Computers on 1.5.1
+  or 1.5.2 keep a day and time given by hand when they update themselves; a day
+  and time from "Schedule", -RandomSchedule or the defaults then follow
+  "Schedule".
+
 ## 1.5.2
 
 - Weekly start fixed or random, set centrally in config.json:

@@ -58,10 +58,11 @@
       Application event log, source "KeepItUpToDater"            one summary event per run
 
 .PARAMETER DayOfWeek
-    Day of the weekly run. Default Wednesday. "Schedule" in config.json overrides it (1.5.2).
+    Day of the weekly run. Default Wednesday. Given on the command line, -DayOfWeek and -Time win over
+    "Schedule" in config.json and over -RandomSchedule (1.5.3); left out, "Schedule" decides.
 
 .PARAMETER Time
-    Local start time of the weekly run, HH:mm. Default 12:00. "Schedule" in config.json overrides it.
+    Local start time of the weekly run, HH:mm. Default 12:00. See -DayOfWeek for "Schedule" in config.json.
 
 .PARAMETER Schedule (config.json)
     Not a parameter (1.5.2): the weekly start for every computer, set centrally in config.json.
@@ -73,13 +74,16 @@
     computer gets its own fixed day and minute in that window, worked out from its name, so the
     slot stays the same at every reinstall and computers are spread evenly. The random delay is
     then 0 unless -RandomDelayMinutes is given; with a delay, the slot is chosen so that the
-    start stays before "To". Overrides -DayOfWeek, -Time and -RandomSchedule. A change takes effect when the
-    installer runs again (next restart with the GPO, or the next self-update).
+    start stays before "To". Overrides -RandomSchedule. -DayOfWeek or -Time on the command line win
+    over it for that computer (1.5.3), for example a GPO for proxy VMs with a fixed time while the
+    other computers follow "Schedule". A change takes effect when the installer runs again (next
+    restart with the GPO, or the next self-update).
 
 .PARAMETER RandomSchedule
     Random weekly start per computer on a weekday (Monday to Friday) between 09:00 and 14:30,
     instead of -DayOfWeek and -Time (1.5.2). The slot comes from the computer name, so it stays
-    the same at every reinstall. "Schedule" in config.json overrides it and can set another window.
+    the same at every reinstall. "Schedule" in config.json overrides it and can set another window;
+    -DayOfWeek or -Time on the command line win over it.
 
 .PARAMETER RandomDelayMinutes
     Random start delay so devices don't all download at the same moment. Default 60, 0 disables.
@@ -220,7 +224,7 @@
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-KeepItUpToDater.ps1 -Uninstall
 
 .NOTES
-    Version   1.5.2
+    Version   1.5.3
     Exit codes (installer): 0 OK, 1 not elevated, 2 install failed or config file missing/invalid.
     Scheduled tasks:        System, User (not with -NoUserTask or "UserTask": false), and Notify
                             (as SYSTEM at each sign-in: shows the last result of the System task
@@ -278,7 +282,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$ToolVersion  = '1.5.2'
+$ToolVersion  = '1.5.3'
 $Name         = 'KeepItUpToDater'
 $DisplayName  = 'Keep It Up To Dater'
 $Organization = 'contoso.local'
@@ -307,6 +311,9 @@ $MaxRunHoursCfg = $null   # "MaxRunHours" from config.json: 0 (no limit) or 1 to
 $SelfUpdateCfg = $null   # "SelfUpdate" from config.json: false turns the self-update off (1.5.1)
 $ScheduleCfg = $null   # "Schedule" from config.json: spread the weekly start (1.5.2)
 $RandomDelayGiven = $PSBoundParameters.ContainsKey('RandomDelayMinutes')
+# 1.5.3: -DayOfWeek or -Time typed on the command line win over "Schedule" in config.json
+$ScheduleGiven = $PSBoundParameters.ContainsKey('DayOfWeek') -or $PSBoundParameters.ContainsKey('Time')
+$ScheduleFromParams = $false   # set by Resolve-Schedule, saved as ScheduleParams
 $TrustedSigners = @()     # "TrustedSigners" from config.json: certificate thumbprints approved for a signed updater (1.5.0)
 $IcaclsExe = Join-Path $env:SystemRoot 'System32\icacls.exe'   # 1.5.0 (security review F-05): by full path
 
@@ -1348,7 +1355,9 @@ function Invoke-SelfUpdate {
         }
     }
     # The settings this computer was installed with
-    $a = @('-DayOfWeek', "$($cfg.ScheduleDay)", '-Time', "$($cfg.ScheduleTime)", '-ConfigFile', $src)
+    $a = @('-ConfigFile', $src)
+    # 1.5.3: day and time only when they were given by hand at the install; otherwise "Schedule" decides
+    if ($cfg.ScheduleParams -eq $true) { $a += @('-DayOfWeek', "$($cfg.ScheduleDay)", '-Time', "$($cfg.ScheduleTime)") }
     if ($null -ne $cfg.MinIntervalDays) { $a += @('-MinIntervalDays', "$($cfg.MinIntervalDays)") }
     if ($null -ne $cfg.InstallTimeoutMinutes) { $a += @('-InstallTimeoutMinutes', "$($cfg.InstallTimeoutMinutes)") }
     if ($null -ne $cfg.RandomDelayMinutes) { $a += @('-RandomDelayMinutes', "$($cfg.RandomDelayMinutes)") }
@@ -2376,7 +2385,27 @@ function Get-ScheduleSlot($Cfg, [string]$ComputerName, [int]$DelayMinutes) {
     $m = $from + ($i % $perDay)
     return @{ Day = $days[[int][math]::Floor($i / $perDay)]; Time = '{0:00}:{1:00}' -f [math]::Floor($m / 60), ($m % 60) }
 }
+function Get-ScheduleGiven {
+    # 1.5.3: were -DayOfWeek or -Time given by hand? They then win over "Schedule" and -RandomSchedule.
+    if (-not $script:ScheduleGiven) { return $false }
+    $stage = Join-Path $script:DataDir 'selfupdate'
+    if (-not ($PSScriptRoot -and ($PSScriptRoot.TrimEnd('\') -ieq $stage))) { return $true }
+    # Started by the self-update of an older version, which always passes the saved day and time.
+    # Whether they were given by hand at the install comes from the installed config.json.
+    try { $prev = Get-Content -LiteralPath (Join-Path $script:InstallDir 'config.json') -Raw -Encoding UTF8 | ConvertFrom-Json } catch { return $false }
+    if (@($prev.PSObject.Properties.Name) -contains 'ScheduleParams') { return ($prev.ScheduleParams -eq $true) }
+    # 1.5.2 and older: by hand means a day and time other than the defaults, without "Schedule" or -RandomSchedule
+    return ($null -eq $prev.Schedule) -and ($prev.RandomScheduleSwitch -ne $true) -and ("$($prev.ScheduleDay) $($prev.ScheduleTime)" -ne 'Wednesday 12:00')
+}
 function Resolve-Schedule {
+    $script:ScheduleFromParams = Get-ScheduleGiven
+    if ($script:ScheduleFromParams) {
+        $notUsed = @()
+        if ($null -ne $script:ScheduleCfg) { $notUsed += '"Schedule" in config.json' }
+        if ($script:RandomSchedule) { $notUsed += '-RandomSchedule' }
+        Write-Output "Weekly start (installer -DayOfWeek/-Time): $($script:DayOfWeek) $($script:Time)$(if ($script:RandomDelayMinutes -gt 0) { " + up to $($script:RandomDelayMinutes) min random delay" })$(if ($notUsed) { "; not used for this computer: $($notUsed -join ' and ')" })"
+        return
+    }
     $cfg = $script:ScheduleCfg
     if ($null -eq $cfg -and $script:RandomSchedule) { $cfg = [pscustomobject][ordered]@{ Mode = 'Random'; Days = @('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'); From = '09:00'; To = '14:30' } }
     if ($null -eq $cfg) { return }
@@ -2653,6 +2682,7 @@ function Save-Config([string]$Folder) {
         SelfUpdate      = $SelfUpdateCfg
         Schedule        = $ScheduleCfg
         RandomScheduleSwitch = [bool]$RandomSchedule
+        ScheduleParams  = [bool]$ScheduleFromParams
     } | ConvertTo-Json -Depth 5
     # 1.5.0 (security review F-02): written next to the target and swapped in; the same text is the last good copy
     foreach ($f in @('config.json', 'config.lastgood.json')) {

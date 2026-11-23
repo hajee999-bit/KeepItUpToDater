@@ -7,7 +7,7 @@ $iast = [Management.Automation.Language.Parser]::ParseFile("$d\Install-KeepItUpT
 "installer parse errors: $($err.Count)"
 function IFn([string]$name) { ($iast.FindAll({ param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $name }, $true) | Select-Object -First 1).Extent.Text }
 foreach ($a in $iast.EndBlock.Statements) { if ($a -is [Management.Automation.Language.AssignmentStatementAst] -and "$($a.Left)" -match '^\$(IdRegex|NameRegex|ExcludeIds|ReplaceRules|RemoveOlderRules|ComputerExcludeIds|ExclusionsSource|ShowResultsCfg|UserTaskCfg|ProxyCfg|ProxyBypassCfg|UseProxyCfg|MaxRunHoursCfg|SelfUpdateCfg|ScheduleCfg|TrustedSigners|InstallDir|ProgramFilesDir|Name|DisplayName|Organization|ToolVersion)$') { . ([scriptblock]::Create($a.Extent.Text)) } }
-foreach ($f in 'Read-Exclusions', 'Save-Config', 'Format-RemoveOlderRules', 'Write-ComputerExclusions', 'Write-UserTaskSetting', 'Get-RunLimitChoice', 'Format-RunHours', 'Write-RunLimitSetting', 'Write-ProxySetting', 'ConvertTo-ScheduleCfg', 'Get-ScheduleSlot', 'Resolve-Schedule') { $t = IFn $f; if ($t) { . ([scriptblock]::Create($t)) } else { "MISSING function $f" } }
+foreach ($f in 'Read-Exclusions', 'Save-Config', 'Format-RemoveOlderRules', 'Write-ComputerExclusions', 'Write-UserTaskSetting', 'Get-RunLimitChoice', 'Format-RunHours', 'Write-RunLimitSetting', 'Write-ProxySetting', 'ConvertTo-ScheduleCfg', 'Get-ScheduleSlot', 'Get-ScheduleGiven', 'Resolve-Schedule') { $t = IFn $f; if ($t) { . ([scriptblock]::Create($t)) } else { "MISSING function $f" } }
 $cdir = Join-Path $d 'cfg152'
 if (Test-Path $cdir) { Remove-Item $cdir -Recurse -Force }; New-Item -ItemType Directory $cdir -Force | Out-Null
 $realName = $env:COMPUTERNAME

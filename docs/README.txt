@@ -1,4 +1,4 @@
-KEEP IT UP TO DATER 1.5.2
+KEEP IT UP TO DATER 1.5.3
 ===========================================================
 
 Weekly automatic app updates with winget for Windows devices where users are
@@ -169,6 +169,13 @@ WHERE THINGS ARE ON A DEVICE
   the root)
 
 CHANGES
+  1.5.3  -DayOfWeek and -Time on the command line win over "Schedule" in
+         config.json (and over -RandomSchedule) for that computer. One
+         config.json with "Schedule" for most computers, and a GPO with
+         -DayOfWeek Tuesday -Time 10:00 for the exceptions (proxy VMs). Left out,
+         "Schedule" decides as in 1.5.2. The self-update passes day and time on
+         only when they were given on the command line; computers on 1.5.1 or
+         1.5.2 keep a day and time given by hand when they update themselves.
   1.5.2  Weekly start fixed or random, set centrally in config.json:
            "Schedule": { "Mode": "Fixed", "Day": "Tuesday", "Time": "10:00" }
            "Schedule": { "Mode": "Random", "Days": "Weekdays",

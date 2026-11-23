@@ -1,4 +1,4 @@
-KEEP IT UP TO DATER 1.5.2 - COMMANDS TO COPY AND PASTE
+KEEP IT UP TO DATER 1.5.3 - COMMANDS TO COPY AND PASTE
 =====================================================================
 Every command is one single line.
 
@@ -131,6 +131,8 @@ GROUP POLICY ROLLOUT
    Script Parameters for the PCs behind the proxy, on a separate GPO that those PCs get
    INSTEAD of the general one (a PC with both: the last install decides):
    -NoProfile -ExecutionPolicy Bypass -File "\\contoso.local\NETLOGON\KeepItUpToDater\Install-KeepItUpToDater.ps1" -UseProxy
+   The same, at a fixed time while the other PCs follow "Schedule" in config.json (1.5.3):
+   -NoProfile -ExecutionPolicy Bypass -File "\\contoso.local\NETLOGON\KeepItUpToDater\Install-KeepItUpToDater.ps1" -UseProxy -DayOfWeek Tuesday -Time 10:00
    Simpler: one GPO for all PCs, and "UseProxy" with their names in config.json.
 
    Script Parameters to remove it (let computers restart, then unlink the GPO):
@@ -326,8 +328,8 @@ Copy-Item C:\Temp\KIUTD-export\Invoke-KeepItUpToDater.ps1 .\
 (The installer deploys a signed Invoke-KeepItUpToDater.ps1 that sits next to it instead of its built-in copy.)
 With Group Policy: put both signed files in \\contoso.local\NETLOGON\KeepItUpToDater\
 
-WEEKLY START: FIXED OR RANDOM (1.5.2)
--------------------------------------
+WEEKLY START: FIXED OR RANDOM (1.5.2, 1.5.3)
+--------------------------------------------
 In config.json on NETLOGON, one of:
     "Schedule": { "Mode": "Fixed", "Day": "Tuesday", "Time": "10:00" }
     "Schedule": { "Mode": "Random", "Days": "Weekdays", "From": "09:00", "To": "14:30" }
@@ -339,6 +341,18 @@ before "To"). Without "Schedule", -DayOfWeek and -Time apply as before; -RandomS
 the installer gives Random, weekdays 09:00-14:30. A change in "Schedule" takes effect when
 the installer runs again: at the next restart (GPO) or the next self-update. The installer
 shows the slot of the computer: "Weekly start spread ...; this computer (NAME): Thursday 11:47".
+
+Exceptions with one config.json (1.5.3): -DayOfWeek or -Time on the command line win over
+"Schedule" and -RandomSchedule for that computer. Example: GPO for the proxy VMs with
+    ... Install-KeepItUpToDater.ps1 -UseProxy -DayOfWeek Tuesday -Time 10:00
+and the general GPO without -DayOfWeek and -Time, so the other computers follow "Schedule".
+Only -Time: the day is Wednesday; only -DayOfWeek: the time is 12:00. The installer shows
+"Weekly start (installer -DayOfWeek/-Time): Tuesday 10:00; not used for this computer:
+"Schedule" in config.json". The self-update keeps it: day and time are passed on only when
+they were given on the command line (ScheduleParams in the installed config.json).
+Computers on 1.5.1 or 1.5.2 that update themselves to 1.5.3 keep a day and time given by
+hand; a day and time that came from "Schedule" or -RandomSchedule, or the defaults
+(Wednesday 12:00), then follow "Schedule".
 
 NEW VERSION ON NETLOGON (self-update, 1.5.1)
 --------------------------------------------
